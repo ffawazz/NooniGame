@@ -32,7 +32,7 @@ namespace Nooni.Characters
         {
             Input = input;
             IsControlled = true;
-            cameraRig.Activate();
+            if (cameraRig) cameraRig.Activate();
             OnPossessed();
         }
 
@@ -40,7 +40,7 @@ namespace Nooni.Characters
         {
             IsControlled = false;
             OnReleased();
-            cameraRig.Deactivate();
+            if (cameraRig) cameraRig.Deactivate();
             Input = null;
         }
 
