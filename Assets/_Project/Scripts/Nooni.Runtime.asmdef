@@ -1,0 +1,13 @@
+{
+    "name": "Nooni.Runtime",
+    "rootNamespace": "Nooni",
+    "references": [
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "autoReferenced": true
+}
