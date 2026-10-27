@@ -1,0 +1,13 @@
+{
+    "name": "Nooni.Editor",
+    "rootNamespace": "Nooni.EditorTools",
+    "references": [
+        "Nooni.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "autoReferenced": true
+}

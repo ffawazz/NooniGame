@@ -2,6 +2,9 @@
 
 Goal: a one-room stealth test. Nooni starts in the south-west corner, Yasser patrols the middle of the room, and Nooni must reach the green exit pad in the north-east using the sofa and counter as cover.
 
+## Quick path: one click
+After step 0, choose **Nooni > Build Greybox Room** from the Unity menu bar and confirm. It builds everything below, saves `Assets/_Project/Scenes/GreyboxRoom.unity`, adds it to Build Settings and bakes the NavMesh. Then press Play. If it prints warnings about Cinemachine or the NavMesh, use the matching manual step (4 or 6) to finish. The rest of this guide describes what it builds and how to do it by hand.
+
 Units are metres. Everything is built from default 3D Objects (Cube, Capsule). Positions below are `(x, y, z)`.
 
 ## 0. One-time project setup
