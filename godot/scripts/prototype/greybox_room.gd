@@ -153,7 +153,7 @@ func _build_hud() -> void:
 	box.add_child(_awareness_bar)
 
 	var help := Label.new()
-	help.text = "WASD move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Esc free mouse"
+	help.text = "WASD/arrows move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Esc free mouse"
 	box.add_child(help)
 
 	_message_label = Label.new()

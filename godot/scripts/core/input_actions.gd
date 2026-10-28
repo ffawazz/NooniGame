@@ -3,10 +3,10 @@ extends RefCounted
 ## Call register() once; it is safe to call repeatedly.
 
 const KEYS := {
-	"move_forward": [KEY_W],
-	"move_back": [KEY_S],
-	"move_left": [KEY_A],
-	"move_right": [KEY_D],
+	"move_forward": [KEY_W, KEY_UP],
+	"move_back": [KEY_S, KEY_DOWN],
+	"move_left": [KEY_A, KEY_LEFT],
+	"move_right": [KEY_D, KEY_RIGHT],
 	"jump": [KEY_SPACE],
 	"sprint": [KEY_SHIFT],
 	"crouch": [KEY_CTRL, KEY_C],

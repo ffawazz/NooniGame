@@ -9,7 +9,7 @@ Everything in the room is built in code, so there is no scene to assemble by han
 
 | Key | Action |
 |---|---|
-| WASD / Mouse | Move / look |
+| WASD or arrow keys / Mouse | Move / look |
 | Ctrl or C | Toggle crouch |
 | Shift | Sprint |
 | Space | Jump |
@@ -21,7 +21,7 @@ Reach the green pad. Crouch inside the blue cover boxes to be invisible; crouchi
 ```
 godot --headless --path godot -s res://tests/run_tests.gd
 ```
-Runs 22 checks in the real room: vision-cone maths, detection (standing vs crouched in cover, range, behind him), Yasser's navmesh patrol, Nooni's movement and crouch, and the glimpse, investigate, return-to-patrol cycle. Prints PASS/FAIL per check and exits non-zero on failure.
+Runs 26 checks in the real room: vision-cone maths, detection (standing vs crouched in cover, range, behind him), Yasser's navmesh patrol, Nooni's movement and crouch, the glimpse, investigate, return-to-patrol cycle, and all four arrow keys. Prints PASS/FAIL per check and exits non-zero on failure.
 
 Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tests/screenshot.gd -- <out_dir>`.
 

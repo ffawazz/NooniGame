@@ -32,6 +32,7 @@ func _run() -> void:
 	await _test_patrol()
 	await _test_nooni_movement()
 	await _test_glimpse_then_investigate()
+	await _test_arrow_keys()
 
 	print("")
 	if failures == 0:
@@ -167,3 +168,31 @@ func _test_glimpse_then_investigate() -> void:
 	_check(not room.yasser.is_caught(), "a short glimpse alone does not get Nooni caught")
 	room.queue_free()
 	await process_frame
+
+
+## Each arrow key must move Nooni, using real key events (not just action presses).
+func _test_arrow_keys() -> void:
+	for key in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+		var room := RoomScene.instantiate()
+		room.test_mode = true
+		root.add_child(room)
+		await process_frame
+		room.yasser.hold_position = true
+		room.yasser.global_position = Vector3(5, 0, 4.5)
+		room.nooni.global_position = Vector3(0, 0, -2)  # open floor, away from furniture
+
+		var start: Vector3 = room.nooni.global_position
+		var press := InputEventKey.new()
+		press.physical_keycode = key
+		press.pressed = true
+		Input.parse_input_event(press)
+		await create_timer(0.6).timeout
+		var release := InputEventKey.new()
+		release.physical_keycode = key
+		release.pressed = false
+		Input.parse_input_event(release)
+
+		var moved: float = room.nooni.global_position.distance_to(start)
+		_check(moved > 1.0, "%s key moves Nooni (%.1f m in 0.6 s)" % [OS.get_keycode_string(key), moved])
+		room.queue_free()
+		await process_frame
