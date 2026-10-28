@@ -63,6 +63,14 @@ var _arrived := false
 var _last_known := Vector3.ZERO
 var _petted_timer := 0.0
 var _lured := false
+var _lure_reason := "a yowl"
+var vision_scale := 1.0  ## Hacked lights out: his sight range is multiplied by this.
+var _dark_timer := 0.0
+var vision_on := false  ## Detective Vision is showing him.
+var _assist_cones := true
+var _xray: MeshInstance3D
+var _xray_material: StandardMaterial3D
+var _alert_label: Label3D
 var _lure_seconds := 0.0
 var _lure_source := Vector3.ZERO
 var _hearts: Node3D
@@ -71,6 +79,9 @@ var _hearts: Node3D
 func _ready() -> void:
 	_apply_kind()
 	add_to_group("brother")
+	add_to_group("vision_aware")
+	var settings: Dictionary = (Engine.get_main_loop() as SceneTree).root.get_node("/root/GameState").settings
+	_assist_cones = settings.get("assist_cones", 1.0) > 0.5
 	collision_layer = 4  # brother
 	collision_mask = 1  # world
 	_build_body()
@@ -146,6 +157,32 @@ func _build_body() -> void:
 	tag.position = Vector3(0, 2.15, 0)
 	add_child(tag)
 
+	# Detective Vision extras: a glowing silhouette that shows through walls, and a suspicion read-out.
+	_xray = MeshInstance3D.new()
+	var xray_mesh := CapsuleMesh.new()
+	xray_mesh.radius = 0.52
+	xray_mesh.height = 2.0
+	_xray.mesh = xray_mesh
+	_xray.position.y = 1.0
+	_xray_material = StandardMaterial3D.new()
+	_xray_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_xray_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_xray_material.no_depth_test = true
+	_xray_material.albedo_color = Color(0.3, 1.0, 0.6, 0.3)
+	_xray.material_override = _xray_material
+	_xray.visible = false
+	add_child(_xray)
+
+	_alert_label = Label3D.new()
+	_alert_label.font_size = 56
+	_alert_label.pixel_size = 0.007
+	_alert_label.outline_size = 12
+	_alert_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_alert_label.no_depth_test = true
+	_alert_label.position = Vector3(0, 2.55, 0)
+	_alert_label.visible = false
+	add_child(_alert_label)
+
 	# Hearts that orbit his head while he is being petted.
 	_hearts = Node3D.new()
 	_hearts.position = Vector3(0, 2.35, 0)
@@ -179,6 +216,11 @@ func _physics_process(delta: float) -> void:
 	if not _running:
 		return
 
+	if _dark_timer > 0.0:
+		_dark_timer -= delta
+		if _dark_timer <= 0.0:
+			vision_scale = 1.0
+
 	if state != State.CAUGHT and state != State.PETTED:
 		_update_perception(delta)
 		if awareness >= 1.0:
@@ -197,6 +239,7 @@ func _physics_process(delta: float) -> void:
 			_stop(delta)
 
 	_update_cone()
+	_update_vision_extras()
 
 
 func is_caught() -> bool:
@@ -210,7 +253,7 @@ func state_name() -> String:
 		State.SUSPICIOUS:
 			return "Suspicious"
 		State.INVESTIGATE:
-			return "Drawn by a yowl" if _lured else "Investigating"
+			return ("Drawn by " + _lure_reason) if _lured else "Investigating"
 		State.PETTED:
 			return "Being petted"
 		_:
@@ -250,7 +293,7 @@ func _perceive(target: Node3D) -> float:
 	if visibility <= 0.0:
 		return 0.0
 
-	var view_range := view_distance * visibility
+	var view_range := view_distance * visibility * vision_scale
 	var eye := get_eye_position()
 	var point: Vector3 = target.get_detection_point()
 
@@ -352,12 +395,13 @@ func can_be_lured() -> bool:
 
 ## Semba's Mighty Roar: drop what he is doing, walk to the spot below `source` and stare up for `seconds`.
 ## If he catches sight of Nooni on the way he still turns suspicious, as usual.
-func lure(source: Vector3, seconds: float) -> bool:
+func lure(source: Vector3, seconds: float, reason := "a yowl") -> bool:
 	if not can_be_lured():
 		return false
 	_lure_source = source
 	_last_known = Vector3(source.x, 0.0, source.z)
 	_lure_seconds = seconds
+	_lure_reason = reason
 	_lured = true
 	_enter(State.INVESTIGATE)
 	return true
@@ -426,19 +470,40 @@ func _face_point(point: Vector3, weight: float) -> void:
 	rotation.y = lerp_angle(rotation.y, atan2(-flat.x, -flat.z), minf(1.0, weight))
 
 
+func set_vision(on: bool) -> void:
+	vision_on = on
+	_xray.visible = on
+	_alert_label.visible = on
+
+
+## Hacked lights out: for `seconds` his sight range is halved.
+func set_darkness(seconds: float) -> void:
+	vision_scale = 0.5
+	_dark_timer = seconds
+
+
+func _update_vision_extras() -> void:
+	if not vision_on:
+		return
+	_xray_material.albedo_color = Color(_lamp.albedo_color.r, _lamp.albedo_color.g, _lamp.albedo_color.b, 0.3)
+	_alert_label.text = "%s  %d%%" % [state_name(), roundi(awareness * 100.0)]
+	_alert_label.modulate = Color.WHITE.lerp(Color(1.0, 0.4, 0.4), awareness)
+
+
 # ---- Debug cone ----------------------------------------------------------------------
 
 ## Translucent floor fan showing where he is looking (green -> red as awareness fills).
 ## Each ray stops at walls and tall furniture, like his actual line of sight.
 func _update_cone() -> void:
-	_cone.visible = show_cone
-	if not show_cone:
+	# Faint with the assist setting on, bright in Detective Vision, hidden otherwise.
+	_cone.visible = show_cone and (vision_on or _assist_cones)
+	if not _cone.visible:
 		return
 
 	var origin := global_position
 	_cone.global_transform = Transform3D(Basis(Vector3.UP, rotation.y), origin + Vector3.UP * 0.03)
 	var color := Color.GREEN.lerp(Color.RED, awareness)
-	color.a = 0.18
+	color.a = 0.3 if vision_on else 0.12
 
 	var space := get_world_3d().direct_space_state
 	var ray_height := Vector3.UP * (eye_height * 0.75)

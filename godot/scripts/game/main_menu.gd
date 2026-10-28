@@ -170,8 +170,20 @@ func _controls_page(box: VBoxContainer) -> void:
 	box.add_child(MenuKit.button("Back", func(): _show("main")))
 
 
+func _assist_on() -> bool:
+	return Game.state().settings.get("assist_cones", 1.0) > 0.5
+
+
 func _settings_page(box: VBoxContainer) -> void:
 	box.add_child(MenuKit.label("SETTINGS", 34, MenuKit.GOLD))
+	var assist := CheckButton.new()
+	assist.text = "Show brothers' vision cones all the time"
+	assist.button_pressed = _assist_on()
+	assist.add_theme_font_size_override("font_size", 20)
+	assist.toggled.connect(func(on: bool):
+		Game.state().settings.assist_cones = 1.0 if on else 0.0
+		Game.state().save())
+	box.add_child(assist)
 	for key in ["master", "music", "sfx"]:
 		box.add_child(MenuKit.label(key.capitalize() + " volume", 20))
 		var slider := HSlider.new()

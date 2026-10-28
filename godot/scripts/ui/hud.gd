@@ -4,11 +4,13 @@ extends Node
 
 const MenuKit := preload("res://scripts/ui/menu_kit.gd")
 const GlassesOverlayScript := preload("res://scripts/ui/glasses_overlay.gd")
+const VisionOverlayScript := preload("res://scripts/ui/vision_overlay.gd")
 const WheelUIScript := preload("res://scripts/ui/cat_wheel_ui.gd")
 
 var level: Node
 var wheel_ui: Control
 var glasses: Control
+var vision_overlay: Control
 var message_label: Label
 
 var _status: Label
@@ -27,6 +29,9 @@ func setup(level_node: Node) -> void:
 	var glasses_layer := CanvasLayer.new()
 	glasses_layer.layer = 0
 	add_child(glasses_layer)
+	vision_overlay = VisionOverlayScript.new()
+	vision_overlay.vision = level.nooni.vision
+	glasses_layer.add_child(vision_overlay)
 	glasses = GlassesOverlayScript.new()
 	glasses.stress = level.nooni.stress
 	glasses_layer.add_child(glasses)

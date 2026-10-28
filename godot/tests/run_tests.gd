@@ -50,6 +50,7 @@ func _run() -> void:
 	await _test_win_through_door()
 	await _test_stress_and_smudge()
 	await _test_framework()
+	await _test_vision_and_hacking()
 
 	print("")
 	if failures == 0:
@@ -711,4 +712,92 @@ func _test_menus_and_cards() -> void:
 	_check(buttons == 2, "the lose panel offers try again and main menu")
 	lose.queue_free()
 	paused = false
+	await process_frame
+
+
+func _test_vision_and_hacking() -> void:
+	var room := await _new_room()
+	var nooni = room.nooni
+	var yasser = room.yasser
+	var tv = room.get_node("SmartTV")
+	var lamp = room.get_node("SmartLamp")
+
+	# Detective Vision on/off with the real mouse action.
+	_check(not nooni.vision.active and not yasser._xray.visible, "vision starts off")
+	Input.action_press("vision")
+	await create_timer(0.2).timeout
+	_check(nooni.vision.active and yasser._xray.visible and tv._marker.visible, "holding right mouse turns Detective Vision on for brothers and gadgets")
+	_check(yasser._cone.visible, "his sightline is shown")
+	Input.action_release("vision")
+	await create_timer(0.2).timeout
+	_check(not nooni.vision.active and not yasser._xray.visible and not tv._marker.visible, "releasing turns it off again")
+
+	# Hacking needs vision, range and a ready device.
+	nooni.global_position = Vector3(-0.5, 0, 3.4)  # next to the TV
+	room.yasser.global_position = Vector3(-4, 0, -2)
+	room.yasser.rotation.y = 0.0  # facing the south wall, away from Nooni
+	room.yasser.view_distance = 0.1  # this test is about the lure, not his eyes
+	Input.action_press("interact")
+	await create_timer(0.1).timeout
+	Input.action_release("interact")
+	_check(tv.cooldown_left <= 0.0 and yasser.state_name() != "Drawn by a noise", "E does nothing without Detective Vision")
+
+	Input.action_press("vision")
+	await create_timer(0.2).timeout
+	nooni.global_position = Vector3(-5, 0, -4)  # far from every gadget
+	Input.action_press("interact")
+	await create_timer(0.1).timeout
+	Input.action_release("interact")
+	_check(tv.cooldown_left <= 0.0, "and nothing happens out of range")
+
+	nooni.global_position = Vector3(2.5, 0, 2.0)  # 3.8 m from the TV, off to the side of Yasser's path
+	await create_timer(0.1).timeout
+	Input.action_press("interact")
+	await create_timer(0.1).timeout
+	Input.action_release("interact")
+	_check(tv.cooldown_left > 0.0, "with vision on and the TV in range, E hacks it")
+	await create_timer(0.3).timeout
+	_check(yasser.state_name() == "Drawn by a noise", "the blaring TV draws Yasser over")
+	await create_timer(3.5).timeout
+	var tv_gap: float = Vector2(yasser.global_position.x - tv.global_position.x, yasser.global_position.z - tv.global_position.z).length()
+	_check(tv_gap < 2.5, "he walks across the room to the TV (%.1f m away)" % tv_gap)
+	Input.action_release("vision")
+
+	# The TV is recharging, so a second hack is refused.
+	_check(not tv.hack(), "a recharging device can't be hacked again")
+	tv.cooldown_left = 0.0
+
+	# Lights out: Yasser's sight range halves, so Nooni 6 m away in plain view is no longer caught.
+	room.queue_free()
+	await process_frame
+	room = await _new_room()
+	room.yasser.global_position = Vector3(-5, 0, 1.5)
+	room.yasser.rotation.y = -PI * 0.5
+	room.nooni.global_position = Vector3(1, 0, 1.5)  # 6 m ahead of him
+	var dark_lamp = room.get_node("SmartLamp")
+	var energy_before: float = dark_lamp._light.light_energy
+	dark_lamp.hack()
+	_check(dark_lamp._light.light_energy == 0.0 and room.yasser.vision_scale == 0.5, "hacking the smart lamp kills the light and halves every brother's sight")
+	await create_timer(2.5).timeout
+	_check(not room.yasser.is_caught(), "so a standing Nooni 6 m away goes unnoticed in the dark")
+	dark_lamp.effect_left = 0.1
+	room.yasser._dark_timer = 0.1
+	await create_timer(0.5).timeout
+	_check(is_equal_approx(dark_lamp._light.light_energy, energy_before) and room.yasser.vision_scale == 1.0, "and the lights come back after a while")
+	room.queue_free()
+	await process_frame
+
+	# A smart lock opens its door (used by later levels): build a tiny rig by hand.
+	room = await _new_room()
+	var lock := preload("res://scripts/puzzle/hackable.gd").new()
+	lock.kind = "lock"
+	lock.display_name = "Smart lock"
+	lock.target = room.door
+	lock.effect_seconds = 0.0
+	room.add_child(lock)
+	await process_frame
+	_check(not room.door.is_open, "the pantry door starts shut")
+	lock.hack()
+	_check(room.door.is_open, "hacking a smart lock opens its door")
+	room.queue_free()
 	await process_frame

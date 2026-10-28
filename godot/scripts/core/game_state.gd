@@ -15,7 +15,7 @@ var current_level := 0
 var unlocked := 1
 ## level index -> {"seconds": float, "spotted": int}
 var results: Dictionary = {}
-var settings := {"master": 0.8, "music": 0.6, "sfx": 0.9}
+var settings := {"master": 0.8, "music": 0.6, "sfx": 0.9, "assist_cones": 1.0}
 ## Set when the story card for a level has been shown, so a Retry does not replay the intro.
 var intro_seen_for := -1
 ## Tries on the current level (a try ends when she is spotted).

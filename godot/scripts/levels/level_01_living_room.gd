@@ -17,9 +17,6 @@ static func data() -> Dictionary:
 		{"t": "box", "pos": Vector3(-2.0, 1.55, 4.945), "size": Vector3(1.8, 0.8, 0.02), "color": Color(0.55, 0.78, 0.95), "outline": 0.0},
 		{"t": "box", "pos": Vector3(-5.95, 1.2, 1.6), "size": Vector3(0.05, 2.1, 1.1), "color": Color(0.78, 0.3, 0.48)},  # curtain
 		{"t": "cyl", "pos": Vector3(-5.9, 2.3, 1.6), "r": 0.03, "h": 1.4, "color": Color(0.3, 0.22, 0.18), "outline": 0.01, "rot": Vector3(90, 0, 0)},
-		{"t": "cyl", "pos": Vector3(-5.4, 0.8, 4.4), "r": 0.04, "h": 1.6, "color": Color(0.2, 0.18, 0.25), "outline": 0.015},  # floor lamp
-		{"t": "cyl", "pos": Vector3(-5.4, 1.8, 4.4), "r": 0.32, "h": 0.4, "color": Color(1.0, 0.92, 0.6), "top_r": 0.18},
-		{"t": "omni", "pos": Vector3(-5.4, 1.7, 4.4), "color": Color(1.0, 0.85, 0.55), "energy": 0.45, "range": 6.0},
 	]
 	# Books on the bookshelf's front face.
 	var spines := [Color(0.85, 0.3, 0.35), Color(0.3, 0.55, 0.85), Color(0.95, 0.75, 0.25), Color(0.4, 0.75, 0.5), Color(0.7, 0.4, 0.8)]
@@ -41,6 +38,7 @@ static func data() -> Dictionary:
 			"Two brothers. One snack. A pantry sealed by a door that only the heavy can open.",
 			"Nooni adjusts her glasses. Somewhere, a violin begins to play. (There is no violin.)",
 			"Tab opens the Cat-ical Wheel. Bruce is heavy. Semba is loud. Nooni is... dramatic.",
+			"Hold the right mouse button: the glasses glint, and the room tells her its secrets.",
 		],
 		"story_outro": [
 			"The snack was acquired.",
@@ -51,6 +49,7 @@ static func data() -> Dictionary:
 			"first_smudge": "Her glasses fog under the pressure. A quick tap of R wipes them clean.",
 			"door_open": "The door slides open. Don't let Bruce leave the plate!",
 			"roar": "Semba's yowl draws the whole room. Nooni, now!",
+			"vision": "Detective Vision: sightlines, suspicion and hackable gadgets. Press E near one to hack it.",
 		},
 		"environment": {"sky_top": Color(0.36, 0.52, 0.86), "sky_horizon": Color(0.98, 0.86, 0.74)},
 		"solids": [
@@ -76,6 +75,10 @@ static func data() -> Dictionary:
 		"climbables": [
 			{"name": "Climb_Bookshelf", "pos": Vector3(-5.0, 1.1, 3.2), "size": Vector3(0.9, 2.2, 1.6), "wall": Vector3(-1, 0, 0), "top_y": 2.0, "landing": Vector3(-5.72, 2.05, 3.2)},
 			{"name": "Climb_Curtain", "pos": Vector3(-5.4, 1.2, 1.6), "size": Vector3(1.0, 2.4, 1.1), "wall": Vector3(-1, 0, 0), "top_y": 2.3, "landing": Vector3(-5.72, 2.05, 2.6)},
+		],
+		"hackables": [
+			{"name": "SmartTV", "kind": "tv", "label": "Smart TV", "pos": Vector3(-0.5, 0, 4.75), "yaw": 0.0, "seconds": 7.0},
+			{"name": "SmartLamp", "kind": "lights", "label": "Smart lamp", "pos": Vector3(-5.4, 0, 4.4), "seconds": 10.0},
 		],
 		"doors": [
 			{"name": "PantryDoor", "label": "Pantry door", "pos": Vector3(4.7, 1.1, 2.5)},

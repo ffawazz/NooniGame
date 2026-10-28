@@ -14,6 +14,7 @@ const CoverScript := preload("res://scripts/stealth/cover_volume.gd")
 const ClimbableScript := preload("res://scripts/puzzle/climbable.gd")
 const PlateScript := preload("res://scripts/puzzle/pressure_plate.gd")
 const DoorScript := preload("res://scripts/puzzle/sliding_door.gd")
+const HackableScript := preload("res://scripts/puzzle/hackable.gd")
 const HudScript := preload("res://scripts/ui/hud.gd")
 const CaptionsScript := preload("res://scripts/ui/captions.gd")
 const StoryCardScript := preload("res://scripts/ui/story_card.gd")
@@ -65,6 +66,7 @@ func _ready() -> void:
 	_build_covers()
 	_build_climbables()
 	_build_doors_and_plates()
+	_build_hackables()
 	_build_characters()
 	_build_exit()
 
@@ -236,6 +238,21 @@ func _build_doors_and_plates() -> void:
 			plate = new_plate
 
 
+func _build_hackables() -> void:
+	for spec in data.get("hackables", []):
+		var device := HackableScript.new()
+		device.name = spec.name
+		device.kind = spec.kind
+		device.display_name = spec.get("label", spec.name)
+		device.position = spec.pos
+		device.rotation.y = spec.get("yaw", 0.0)
+		device.cooldown_seconds = spec.get("cooldown", 12.0)
+		device.effect_seconds = spec.get("seconds", 7.0)
+		if spec.has("door"):
+			device.target = doors[spec.door]
+		add_child(device)
+
+
 func _build_characters() -> void:
 	var spawns: Dictionary = data.spawns
 	nooni = _spawn_cat(NooniScript, "Nooni", spawns.nooni)
@@ -334,6 +351,7 @@ func _play_intro() -> void:
 
 func _connect_hint_events() -> void:
 	nooni.stress.smudged.connect(func(): _hint("first_smudge"))
+	nooni.vision.activated.connect(func(): _hint("vision"))
 	for new_plate in plates:
 		new_plate.changed.connect(func(active: bool): if active: _hint("door_open"))
 	if semba:

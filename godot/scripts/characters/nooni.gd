@@ -10,6 +10,8 @@ extends "res://scripts/characters/playable_character.gd"
 const CoverVolume := preload("res://scripts/stealth/cover_volume.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 const StressMeter := preload("res://scripts/stealth/stress_meter.gd")
+const DetectiveVision := preload("res://scripts/stealth/detective_vision.gd")
+const Hackable := preload("res://scripts/puzzle/hackable.gd")
 
 @export_group("Movement")
 @export var walk_speed := 3.5
@@ -31,6 +33,8 @@ const StressMeter := preload("res://scripts/stealth/stress_meter.gd")
 var crouching := false
 ## Her stress meter and glasses smudge (see stress_meter.gd). Wipe with the R key.
 var stress: Node
+## Detective Vision (hold right mouse); hack gadgets with E while it is on.
+var vision: Node
 var current_height := 1.8
 
 var _shape: CapsuleShape3D
@@ -60,6 +64,11 @@ func _ready() -> void:
 	stress.name = "StressMeter"
 	stress.character = self
 	add_child(stress)
+
+	vision = DetectiveVision.new()
+	vision.name = "DetectiveVision"
+	vision.character = self
+	add_child(vision)
 
 
 func _build_body() -> void:
@@ -131,6 +140,8 @@ func _physics_process(delta: float) -> void:
 			_toggle_crouch()
 		if Input.is_action_just_pressed("wipe_glasses"):
 			stress.wipe()
+		if vision.active and Input.is_action_just_pressed("interact"):
+			Hackable.try_hack(get_tree(), global_position)
 		move_input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		sprint = Input.is_action_pressed("sprint")
 		jump = Input.is_action_just_pressed("jump")

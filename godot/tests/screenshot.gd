@@ -6,6 +6,10 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		out = args[0]
+	var state := preload("res://scripts/core/game_state.gd").new()
+	state.name = "GameState"
+	state.test_mode = true
+	root.add_child(state)
 	var room = load("res://scenes/level.tscn").instantiate()
 	room.test_mode = true
 	root.add_child(room)
@@ -93,6 +97,20 @@ func _initialize() -> void:
 	root.get_texture().get_image().save_png(out + "/shot_wiping.png")
 	await create_timer(0.5).timeout
 	room.nooni.stress.value = 0.0
+
+	# Detective Vision: the glint, then the full view.
+	room.nooni.global_position = Vector3(-1.5, 0, 2.6)
+	room.nooni.set_crouching_instant(false)
+	room.nooni.stress.value = 0.0
+	room.nooni.stress.smudge = 0.0
+	await create_timer(0.3).timeout
+	Input.action_press("vision")
+	await create_timer(0.17).timeout
+	root.get_texture().get_image().save_png(out + "/shot_vision_glint.png")
+	await create_timer(0.8).timeout
+	root.get_texture().get_image().save_png(out + "/shot_vision.png")
+	Input.action_release("vision")
+	await create_timer(0.3).timeout
 
 	# Overhead view of the whole room.
 	var top := Camera3D.new()
