@@ -4,11 +4,12 @@ extends "res://scripts/characters/playable_character.gd"
 ##
 ## Stealth (read by BrotherAI through get_visibility()):
 ##   standing               -> 1.0
-##   crouched in the open   -> crouched_visibility (shorter sight range)
+##   crouched in the open   -> crouched_visibility, plus up to stress_visibility_penalty when stressed
 ##   crouched inside cover  -> 0.0 (hidden)
 
 const CoverVolume := preload("res://scripts/stealth/cover_volume.gd")
 const Toon := preload("res://scripts/core/toon.gd")
+const StressMeter := preload("res://scripts/stealth/stress_meter.gd")
 
 @export_group("Movement")
 @export var walk_speed := 3.5
@@ -24,8 +25,12 @@ const Toon := preload("res://scripts/core/toon.gd")
 @export var crouch_height := 1.0
 @export var crouch_transition_speed := 6.0
 @export_range(0.0, 1.0) var crouched_visibility := 0.5
+## Extra visibility when crouched in the open and fully stressed: shaky hands make her sloppy at hiding.
+@export_range(0.0, 1.0) var stress_visibility_penalty := 0.3
 
 var crouching := false
+## Her stress meter and glasses smudge (see stress_meter.gd). Wipe with the R key.
+var stress: Node
 var current_height := 1.8
 
 var _shape: CapsuleShape3D
@@ -50,6 +55,11 @@ func _ready() -> void:
 	add_to_group("detectable")
 	current_height = stand_height
 	_build_body()
+
+	stress = StressMeter.new()
+	stress.name = "StressMeter"
+	stress.character = self
+	add_child(stress)
 
 
 func _build_body() -> void:
@@ -119,6 +129,8 @@ func _physics_process(delta: float) -> void:
 	if input_enabled:
 		if Input.is_action_just_pressed("crouch"):
 			_toggle_crouch()
+		if Input.is_action_just_pressed("wipe_glasses"):
+			stress.wipe()
 		move_input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		sprint = Input.is_action_pressed("sprint")
 		jump = Input.is_action_just_pressed("jump")
@@ -204,7 +216,9 @@ func is_in_cover() -> bool:
 func get_visibility() -> float:
 	if not crouching:
 		return 1.0
-	return 0.0 if is_in_cover() else crouched_visibility
+	if is_in_cover():
+		return 0.0
+	return minf(1.0, crouched_visibility + stress.value * stress_visibility_penalty)
 
 
 func status_text() -> String:

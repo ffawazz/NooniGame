@@ -13,6 +13,7 @@ Everything in the room is built in code, so there is no scene to assemble by han
 | Ctrl or C | Toggle crouch |
 | Shift | Sprint |
 | Space | Jump |
+| R | Wipe your glasses when they smudge (quick tap) |
 | Q | Character ability (Bruce: Bat-Nap, Semba: Mighty Roar) |
 | Hold Tab | Cat-ical Wheel: time slows, move the mouse to a slice, release to switch (a quick tap cycles) |
 | 1 / 2 / 3 | Switch straight to Nooni / Bruce / Semba |
@@ -25,13 +26,15 @@ Everything in the room is built in code, so there is no scene to assemble by han
 4. Optional: **Semba** (press **3**) is fast, has a double jump and climbs. Push toward the bookshelf or the curtain on the west wall (they are labelled "climb (Semba)") and hold forward to scale it. From a high point press **Q** for the **Mighty Roar**: every brother in the room walks over to stare up at him for about 7 seconds. Switch to Nooni and slip past while Yasser is away from his patrol. Brothers still have eyes, so stay out of sight while they cross the room.
 5. Optional: press **Q** with Bruce beside Yasser's patrol route to arm a Bat-Nap. When Yasser walks by he is forced into a 10-second petting session, frozen, and Nooni can walk past him. The nap stays armed while you play Nooni.
 
-Crouching works as before. Crouch inside the blue cover boxes to be invisible; crouching in the open only halves his sight range.
+Crouching works as before.
+
+**Stress:** Nooni has a stress meter instead of health. It rises while Yasser is closing in on spotting her (and a little when he is merely near), and falls when she is left alone, faster crouched in cover. Past the halfway mark her glasses fog up and the smudge keeps building until she taps **R** to wipe them. Stress also makes her sloppier at hiding when crouched in the open. It keeps running while you play a cat, so she may be smudged when you switch back. Crouch inside the blue cover boxes to be invisible; crouching in the open only halves his sight range.
 
 ## Automated tests
 ```
 godot --headless --path godot -s res://tests/run_tests.gd
 ```
-Runs 88 checks in the real room: vision-cone maths, detection (standing vs crouched in cover, range, behind him), Yasser's navmesh patrol, Nooni's movement and crouch, the glimpse, investigate, return-to-patrol cycle, all four arrow keys, the pressure plate and door, switching with the camera blend, the wheel (time slowdown, hover, cancel, locked slot, tap to cycle) Bruce's Bat-Nap, Semba's climbing, speed, double jump and Mighty Roar (including the lure and its cooldown), and an end-to-end win through the pantry door. Prints PASS/FAIL per check and exits non-zero on failure.
+Runs 104 checks in the real room: vision-cone maths, detection (standing vs crouched in cover, range, behind him), Yasser's navmesh patrol, Nooni's movement and crouch, the glimpse, investigate, return-to-patrol cycle, all four arrow keys, the pressure plate and door, switching with the camera blend, the wheel (time slowdown, hover, cancel, locked slot, tap to cycle) Bruce's Bat-Nap, Semba's climbing, speed, double jump and Mighty Roar (including the lure and its cooldown), and an end-to-end win through the pantry door. Prints PASS/FAIL per check and exits non-zero on failure.
 
 Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tests/screenshot.gd -- <out_dir>`.
 
@@ -55,6 +58,7 @@ Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tes
 - `scripts/characters/semba.gd` + `scripts/puzzle/climbable.gd`: Semba (fast, climbs, Mighty Roar) and the surfaces he can climb
 - `scripts/characters/character_switcher.gd` + `scripts/ui/cat_wheel_ui.gd`, `wheel_math.gd`: the Cat-ical Wheel and camera blend
 - `scripts/puzzle/pressure_plate.gd`, `sliding_door.gd`: weight-activated door
+- `scripts/stealth/stress_meter.gd` + `scripts/ui/glasses_overlay.gd`: stress, smudge and wiping
 - `scripts/ai/brother_ai.gd`: patrol / suspicious / investigate / caught, vision cone and awareness
 - `scripts/ai/vision_math.gd`: cone maths (unit-tested)
 - `scripts/stealth/cover_volume.gd`: hiding boxes

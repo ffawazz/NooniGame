@@ -18,6 +18,7 @@ const SwitcherScript := preload("res://scripts/characters/character_switcher.gd"
 const WheelUIScript := preload("res://scripts/ui/cat_wheel_ui.gd")
 const PlateScript := preload("res://scripts/puzzle/pressure_plate.gd")
 const DoorScript := preload("res://scripts/puzzle/sliding_door.gd")
+const GlassesOverlayScript := preload("res://scripts/ui/glasses_overlay.gd")
 
 ## Headless tests: no mouse capture, no auto-restart.
 var test_mode := false
@@ -39,6 +40,10 @@ var _door_label: Label
 var _wheel_ui: Control
 var _brother_label: Label
 var _awareness_bar: ProgressBar
+var _stress_bar: ProgressBar
+var _stress_fill: StyleBoxFlat
+var _wipe_hint: Label
+var _glasses: Control
 var _message_label: Label
 
 
@@ -69,6 +74,12 @@ func _process(_delta: float) -> void:
 	_door_label.text = "Pantry door: %s" % ("OPEN" if door.is_open else "LOCKED (a heavy cat on the plate opens it)")
 	_brother_label.text = "Yasser: " + yasser.state_name()
 	_awareness_bar.value = yasser.awareness
+
+	var stress = nooni.stress
+	_stress_bar.value = stress.value
+	_stress_fill.bg_color = Color(0.4, 0.85, 0.5).lerp(Color(0.95, 0.25, 0.3), clampf(stress.value * 1.4 - 0.2, 0.0, 1.0))
+	_glasses.active = switcher.current == nooni
+	_wipe_hint.visible = _glasses.active and stress.smudge >= 0.25 and not stress.wiping and int(Time.get_ticks_msec() / 350.0) % 2 == 0
 
 
 # ---- Building ------------------------------------------------------------------------
@@ -255,6 +266,14 @@ func _build_exit() -> void:
 
 
 func _build_hud() -> void:
+	# Smudges sit on a layer below the HUD so the text stays readable through them.
+	var glasses_layer := CanvasLayer.new()
+	glasses_layer.layer = 0
+	add_child(glasses_layer)
+	_glasses = GlassesOverlayScript.new()
+	_glasses.stress = nooni.stress
+	glasses_layer.add_child(_glasses)
+
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
@@ -269,13 +288,14 @@ func _build_hud() -> void:
 	_door_label = _hud_label()
 	box.add_child(_door_label)
 
-	_awareness_bar = ProgressBar.new()
-	_awareness_bar.min_value = 0.0
-	_awareness_bar.max_value = 1.0
-	_awareness_bar.step = 0.01
-	_awareness_bar.show_percentage = false
-	_awareness_bar.custom_minimum_size = Vector2(220, 12)
+	box.add_child(_hud_label("Yasser's suspicion"))
+	_awareness_bar = _bar(Color(0.95, 0.8, 0.25))
 	box.add_child(_awareness_bar)
+
+	box.add_child(_hud_label("Nooni's stress"))
+	_stress_bar = _bar(Color(0.4, 0.85, 0.5))
+	_stress_fill = _stress_bar.get_theme_stylebox("fill")
+	box.add_child(_stress_bar)
 
 	var help := _hud_label()
 	help.text = "WASD/arrows move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Q ability | Hold Tab: cat wheel | 1/2/3 switch | Esc free mouse"
@@ -283,6 +303,14 @@ func _build_hud() -> void:
 
 	_wheel_ui = WheelUIScript.new()
 	layer.add_child(_wheel_ui)
+
+	_wipe_hint = _hud_label("SMUDGED!  Press R to wipe your glasses")
+	_wipe_hint.add_theme_font_size_override("font_size", 28)
+	_wipe_hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_wipe_hint.position.y -= 70.0
+	_wipe_hint.position.x -= 230.0
+	_wipe_hint.visible = false
+	layer.add_child(_wipe_hint)
 
 	_message_label = _hud_label()
 	_message_label.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -294,8 +322,23 @@ func _build_hud() -> void:
 
 # ---- Helpers -------------------------------------------------------------------------
 
-func _hud_label() -> Label:
+## A thin coloured bar with its own fill style, so its colour can be changed from code.
+func _bar(color: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.min_value = 0.0
+	bar.max_value = 1.0
+	bar.step = 0.01
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(220, 12)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = color
+	bar.add_theme_stylebox_override("fill", fill)
+	return bar
+
+
+func _hud_label(text := "") -> Label:
 	var label := Label.new()
+	label.text = text
 	label.add_theme_color_override("font_outline_color", Color(0.07, 0.05, 0.11))
 	label.add_theme_constant_override("outline_size", 6)
 	return label

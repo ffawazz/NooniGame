@@ -299,6 +299,10 @@ func _tick_investigate(delta: float) -> void:
 		_enter(State.PATROL)
 
 
+func is_petted() -> bool:
+	return state == State.PETTED
+
+
 func can_be_lured() -> bool:
 	return _running and state != State.CAUGHT and state != State.PETTED
 

@@ -81,6 +81,19 @@ func _initialize() -> void:
 	room.switcher.close_wheel(false)
 	await create_timer(0.3).timeout
 
+	# Stressed Nooni: smudged glasses, then mid-wipe.
+	room.switcher.request_switch(0)
+	room.nooni.get_camera().current = true
+	room.nooni.stress.value = 0.85
+	room.nooni.stress.smudge = 0.75
+	await create_timer(0.4).timeout
+	root.get_texture().get_image().save_png(out + "/shot_smudged.png")
+	room.nooni.stress.wipe()
+	await create_timer(0.15).timeout
+	root.get_texture().get_image().save_png(out + "/shot_wiping.png")
+	await create_timer(0.5).timeout
+	room.nooni.stress.value = 0.0
+
 	# Overhead view of the whole room.
 	var top := Camera3D.new()
 	room.add_child(top)

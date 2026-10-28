@@ -42,6 +42,7 @@ func _run() -> void:
 	await _test_semba_climbing()
 	await _test_mighty_roar()
 	await _test_win_through_door()
+	await _test_stress_and_smudge()
 
 	print("")
 	if failures == 0:
@@ -492,5 +493,96 @@ func _test_win_through_door() -> void:
 	Input.action_release("move_forward")
 	_check(room._finished, "Nooni walks through the open door onto the exit pad and the round is won")
 	_check(room._message_label.text.begins_with("MISSION COMPLETE"), "with the win message on screen")
+	room.queue_free()
+	await process_frame
+
+
+func _test_stress_and_smudge() -> void:
+	var room := await _new_room()
+	var nooni = room.nooni
+	var stress = nooni.stress
+	_check(stress.value == 0.0 and stress.smudge == 0.0, "stress starts at zero with clean glasses")
+
+	# Yasser in plain view but slow to react: awareness climbs, so does stress.
+	room.yasser.global_position = Vector3(-5, 0, 1.5)
+	room.yasser.rotation.y = -PI * 0.5
+	room.yasser.detection_seconds = 5.0
+	nooni.global_position = Vector3(1, 0, 1.5)  # 6 m ahead of him
+	await create_timer(2.6).timeout
+	_check(stress.value > 0.5, "stress rises while a brother is closing in (%.2f)" % stress.value)
+	_check(stress.smudge > 0.25, "her glasses smudge once stress passes the threshold (%.2f)" % stress.smudge)
+	_check(not room._finished, "and she hasn't been caught yet")
+
+	# Hide: stress falls but the smudge stays until she wipes.
+	nooni.global_position = Vector3(-2, 0, -3.9)  # she ducks into the sofa's cover
+	nooni.set_crouching_instant(true)
+	var smudge_before: float = stress.smudge
+	await create_timer(1.5).timeout
+	_check(stress.smudge >= smudge_before - 0.001, "the smudge does not clean itself")
+
+	# Wipe with the real key.
+	var stress_before: float = stress.value
+	Input.action_press("wipe_glasses")
+	await create_timer(0.1).timeout
+	Input.action_release("wipe_glasses")
+	_check(stress.wiping, "pressing R starts a wipe")
+	await create_timer(0.6).timeout
+	_check(stress.smudge == 0.0 and not stress.wiping, "the glasses are clean again")
+	_check(stress.value < stress_before, "and wiping takes the edge off her stress")
+	_check(not stress.wipe(), "wiping clean glasses does nothing")
+	room.queue_free()
+	await process_frame
+
+	# Calming: faster when crouched in cover than standing in the open.
+	room = await _new_room()
+	var calm_open = room.nooni
+	calm_open.stress.value = 0.8
+	calm_open.global_position = Vector3(-4.5, 0, -1)  # open floor, no brother near
+	await create_timer(2.0).timeout
+	var open_drop: float = 0.8 - calm_open.stress.value
+	calm_open.stress.value = 0.8
+	calm_open.global_position = Vector3(-2, 0, -3.9)
+	calm_open.set_crouching_instant(true)
+	await create_timer(2.0).timeout
+	var cover_drop: float = 0.8 - calm_open.stress.value
+	_check(cover_drop > open_drop + 0.1, "stress falls faster crouched in cover (%.2f vs %.2f)" % [cover_drop, open_drop])
+	room.queue_free()
+	await process_frame
+
+	# Stress makes her sloppy at hiding in the open, but cover is still perfectly safe.
+	room = await _new_room()
+	var n2 = room.nooni
+	n2.global_position = Vector3(-4.5, 0, -1)
+	n2.set_crouching_instant(true)
+	n2.stress.value = 0.0
+	var calm_visibility: float = n2.get_visibility()
+	n2.stress.value = 1.0
+	_check(n2.get_visibility() > calm_visibility + 0.2, "a stressed Nooni is easier to spot when crouched in the open (%.2f -> %.2f)" % [calm_visibility, n2.get_visibility()])
+	n2.global_position = Vector3(-2, 0, -3.9)
+	_check(n2.get_visibility() == 0.0, "but still invisible in cover")
+	room.queue_free()
+	await process_frame
+
+	# A brother who is merely close (and looking away) still makes her a bit nervous.
+	room = await _new_room()
+	room.yasser.global_position = Vector3(-2, 0, 1)
+	room.yasser.rotation.y = PI  # facing away
+	room.nooni.global_position = Vector3(-2, 0, -1.5)  # 2.5 m behind him
+	await create_timer(3.0).timeout
+	_check(room.nooni.stress.value > 0.05 and room.yasser.awareness == 0.0, "a close brother raises stress even without spotting her (%.2f)" % room.nooni.stress.value)
+	room.queue_free()
+	await process_frame
+
+	# The overlay shows only while Nooni is the one being played.
+	room = await _new_room()
+	room.nooni.stress.smudge = 0.6
+	await create_timer(0.2).timeout
+	_check(room._glasses.visible, "the smudge is drawn while Nooni is played")
+	room.switcher.request_switch(1)
+	await create_timer(0.9).timeout
+	_check(not room._glasses.visible, "and hidden while Bruce is played (cats don't wear glasses)")
+	room.switcher.request_switch(0)
+	await create_timer(0.9).timeout
+	_check(room._glasses.visible, "but still there when we switch back")
 	room.queue_free()
 	await process_frame
