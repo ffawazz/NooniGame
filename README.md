@@ -4,7 +4,9 @@ A cozy 3D stealth-comedy puzzle-adventure about Nooni, a Saudi Information Syste
 inconveniences like high-stakes espionage. Sneak past her overprotective brothers Yasser and Ahmed by switching between
 Nooni, Bruce (a fat black cat who thinks he is Batman) and Semba (a grey street cat with a Lion King complex).
 
-**The game lives in [`godot/`](godot/README.md)** (Godot 4, GDScript). Open that folder's `project.godot` in Godot 4.4
+**To just play (Windows): unzip [`releases/NooniGame_windows_x64.zip`](releases/NooniGame_windows_x64.zip) and run `NooniGame.exe`.**
+
+**The source lives in [`godot/`](godot/README.md)** (Godot 4, GDScript). Open that folder's `project.godot` in Godot 4.4
 and press F5.
 
 - 5 levels: the Living Room, Kitchen and Garage, a driving stage down King Fahd Road, the PNU Courtyard and the Exam Hall.

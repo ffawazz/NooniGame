@@ -3,7 +3,10 @@
 A cozy 3D stealth-comedy puzzle-adventure in five levels. Cel-shaded, built entirely in code from primitives, with
 procedurally generated sound. Keyboard and mouse.
 
-## Run it
+## Play it (Windows, no Godot needed)
+Unzip `../releases/NooniGame_windows_x64.zip` and run `NooniGame.exe`. Windows may warn that it is unsigned: click "More info", then "Run anyway".
+
+## Run from source
 1. Download **Godot 4.4.x (standard, not .NET)** from https://godotengine.org/download (a single `.exe`, no installer).
 2. Start Godot, click **Import**, pick `godot/project.godot`, and press **F5**.
 
@@ -61,6 +64,9 @@ Sections include `detection`, `patrol`, `switching`, `wheel_flow`, `bat_nap`, `s
 `courtyard_and_exam_hall`, `driving`, `audio`. They run the real game scenes headless: vision, navigation, puzzles,
 menus, saving, every level's ground route, and the driving rules. Screenshot tools (need a display, e.g. `xvfb-run`):
 `tests/screenshot*.gd`.
+
+## Building the Windows exe
+`export_presets.cfg` has a "Windows Desktop" preset. In Godot: Editor > Manage Export Templates > Download, then Project > Export. Or headless: `godot --headless --path godot --export-release "Windows Desktop"` (writes `build/NooniGame.exe`).
 
 ## Audio
 `python3 tools/make_audio.py` regenerates every effect and music loop into `godot/audio/` (numpy only).

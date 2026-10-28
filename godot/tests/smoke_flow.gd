@@ -21,6 +21,15 @@ func _press_accept() -> void:
 	Input.parse_input_event(press)
 
 
+## Press Space until the story card is gone (it pauses the world while it is up).
+func _dismiss_cards() -> void:
+	for i in 40:
+		if not paused:
+			return
+		_press_accept()
+		await create_timer(0.15).timeout
+
+
 func _scene_name() -> String:
 	return current_scene.name if current_scene else "(none)"
 
@@ -47,9 +56,7 @@ func _run() -> void:
 	await create_timer(1.2).timeout
 	_check(_scene_name() == "Level", "New game loads the first level")
 	_check(paused, "the story card pauses the world")
-	for i in 8:
-		_press_accept()
-		await create_timer(0.2).timeout
+	await _dismiss_cards()
 	_check(not paused, "pressing Space through the story card starts the level")
 	_check(root.get_node("Audio").current_music() == "music_stealth", "the stealth music plays")
 
@@ -58,16 +65,11 @@ func _run() -> void:
 		_check(state.current_level == index, "now on level %d (%s)" % [index + 1, Levels.info(index).id])
 		var level = current_scene
 		if Levels.info(index).kind == "stealth":
-			if index > 0:
-				for i in 8:  # dismiss the intro card
-					_press_accept()
-					await create_timer(0.15).timeout
+			await _dismiss_cards()
 			_check(not paused, "level %d is running" % (index + 1))
 			level.nooni.global_position = level.exit_position
 		else:
-			for i in 8:
-				_press_accept()
-				await create_timer(0.15).timeout
+			await _dismiss_cards()
 			_check(not paused, "the drive is running")
 			level.distance = level.length
 		await create_timer(2.2).timeout
