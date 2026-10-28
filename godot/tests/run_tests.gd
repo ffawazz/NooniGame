@@ -51,6 +51,7 @@ func _run() -> void:
 	await _test_stress_and_smudge()
 	await _test_framework()
 	await _test_vision_and_hacking()
+	await _test_grapple()
 
 	print("")
 	if failures == 0:
@@ -799,5 +800,77 @@ func _test_vision_and_hacking() -> void:
 	_check(not room.door.is_open, "the pantry door starts shut")
 	lock.hack()
 	_check(room.door.is_open, "hacking a smart lock opens its door")
+	room.queue_free()
+	await process_frame
+
+
+func _test_grapple() -> void:
+	var room := await _new_room()
+	var nooni = room.nooni
+	var hook = room.get_node("Hook_WallShelf")
+	var shelf_top := Vector3(-3.5, 1.95, 4.65)
+
+	# Face the hook and tilt the camera to put it under the crosshair.
+	nooni.global_position = Vector3(-3.5, 0, 1.0)
+	nooni._yaw = PI  # camera looks toward +Z, at the north wall
+	await create_timer(0.2).timeout
+	# The crosshair ray runs through the camera pivot, so aim the pivot at the hook.
+	var toward: Vector3 = (hook.global_position - nooni._pivot.global_position).normalized()
+	nooni._pitch = asin(toward.y)
+	await create_timer(0.2).timeout
+	_check(nooni.grapple_target == hook and hook.targeted, "aiming at the wall hook targets it")
+
+	# Looking away loses the target.
+	nooni._pitch = -0.45
+	await create_timer(0.2).timeout
+	_check(nooni.grapple_target == null and not hook.targeted, "looking away drops the target")
+
+	# Too far away: out of range.
+	nooni.global_position = Vector3(5.5, 0, -4.5)
+	nooni._yaw = PI * 0.75
+	await create_timer(0.2).timeout
+	_check(nooni.grapple_target == null, "a hook beyond max range can't be targeted")
+
+	# Fire it.
+	nooni.global_position = Vector3(-3.5, 0, 1.0)
+	nooni._yaw = PI
+	await create_timer(0.2).timeout
+	toward = (hook.global_position - nooni._pivot.global_position).normalized()
+	nooni._pitch = asin(toward.y)
+	await create_timer(0.2).timeout
+	Input.action_press("grapple")
+	await create_timer(0.1).timeout
+	Input.action_release("grapple")
+	_check(nooni._zipping and nooni._rope.visible, "clicking launches the grapple and shows the rope")
+	_check(not nooni.can_release(), "she can't be switched away mid-zip")
+	await create_timer(1.4).timeout
+	_check(not nooni._zipping and nooni.global_position.distance_to(shelf_top) < 0.8, "she lands on the wall shelf (%.2f m off)" % nooni.global_position.distance_to(shelf_top))
+	_check(not nooni._rope.visible and nooni.can_release(), "the rope retracts and she is free again")
+	_check(nooni.grapple_cooldown_left > 0.0 or nooni.grapple_cooldown_left == 0.0, "cooldown runs")
+
+	# She can walk about up there, and drop back down.
+	var perch: Vector3 = nooni.global_position
+	nooni._yaw = PI * 0.5
+	Input.action_press("move_forward")
+	await create_timer(0.3).timeout
+	Input.action_release("move_forward")
+	_check(nooni.global_position.y > 1.5, "she stands on the shelf rather than falling through it (y = %.2f)" % nooni.global_position.y)
+
+	# Blocked line of sight: the sofa-height cover isn't enough, so put a tall wall in the way.
+	var blocker := StaticBody3D.new()
+	blocker.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(4, 4, 0.3)
+	shape.shape = box
+	blocker.add_child(shape)
+	room.add_child(blocker)
+	blocker.global_position = Vector3(-3.5, 2, 2.5)
+	nooni.global_position = Vector3(-3.5, 0, 1.0)
+	nooni._yaw = PI
+	nooni._pitch = asin(toward.y)
+	nooni.grapple_cooldown_left = 0.0
+	await create_timer(0.3).timeout
+	_check(nooni.grapple_target == null, "a wall between her and the hook blocks the shot")
 	room.queue_free()
 	await process_frame

@@ -15,6 +15,7 @@ const ClimbableScript := preload("res://scripts/puzzle/climbable.gd")
 const PlateScript := preload("res://scripts/puzzle/pressure_plate.gd")
 const DoorScript := preload("res://scripts/puzzle/sliding_door.gd")
 const HackableScript := preload("res://scripts/puzzle/hackable.gd")
+const AnchorScript := preload("res://scripts/puzzle/grapple_anchor.gd")
 const HudScript := preload("res://scripts/ui/hud.gd")
 const CaptionsScript := preload("res://scripts/ui/captions.gd")
 const StoryCardScript := preload("res://scripts/ui/story_card.gd")
@@ -67,6 +68,7 @@ func _ready() -> void:
 	_build_climbables()
 	_build_doors_and_plates()
 	_build_hackables()
+	_build_anchors()
 	_build_characters()
 	_build_exit()
 
@@ -105,6 +107,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(_delta: float) -> void:
 	if _finished:
 		return
+	if nooni.grapple_target != null:
+		_hint("grapple")
 	var d := nooni.global_position - exit_position
 	d.y = 0.0
 	if d.length() <= goal_radius:
@@ -251,6 +255,16 @@ func _build_hackables() -> void:
 		if spec.has("door"):
 			device.target = doors[spec.door]
 		add_child(device)
+
+
+func _build_anchors() -> void:
+	for spec in data.get("anchors", []):
+		var anchor := AnchorScript.new()
+		anchor.name = spec.name
+		anchor.position = spec.pos
+		anchor.landing = spec.landing
+		anchor.rotation.y = spec.get("yaw", 0.0)
+		add_child(anchor)
 
 
 func _build_characters() -> void:

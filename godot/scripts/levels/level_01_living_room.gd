@@ -49,6 +49,7 @@ static func data() -> Dictionary:
 			"first_smudge": "Her glasses fog under the pressure. A quick tap of R wipes them clean.",
 			"door_open": "The door slides open. Don't let Bruce leave the plate!",
 			"roar": "Semba's yowl draws the whole room. Nooni, now!",
+			"grapple": "A grapple hook! Aim the camera at it and click. Zip, ODM-style.",
 			"vision": "Detective Vision: sightlines, suspicion and hackable gadgets. Press E near one to hack it.",
 		},
 		"environment": {"sky_top": Color(0.36, 0.52, 0.86), "sky_horizon": Color(0.98, 0.86, 0.74)},
@@ -62,6 +63,7 @@ static func data() -> Dictionary:
 			{"name": "Counter", "pos": Vector3(4.5, 0.5, -1), "size": Vector3(1, 1, 3), "color": Color(0.85, 0.55, 0.35)},
 			{"name": "CoffeeTable", "pos": Vector3(-0.5, 0.25, 0), "size": Vector3(1.6, 0.5, 0.8), "color": Color(0.5, 0.33, 0.24)},
 			{"name": "Bookshelf", "pos": Vector3(-5.75, 1.0, 3.2), "size": Vector3(0.5, 2.0, 2.0), "color": Color(0.62, 0.42, 0.28)},
+			{"name": "WallShelf", "pos": Vector3(-3.5, 1.85, 4.7), "size": Vector3(1.6, 0.1, 0.5), "color": Color(0.62, 0.42, 0.28)},
 			{"name": "Pantry_West", "pos": Vector3(3.2, 1.25, 3.75), "size": Vector3(0.15, 2.5, 2.5), "color": WALL, "opts": wall_panel},
 			{"name": "Pantry_South_A", "pos": Vector3(3.7, 1.25, 2.5), "size": Vector3(1.0, 2.5, 0.15), "color": WALL, "opts": wall_panel},
 			{"name": "Pantry_South_B", "pos": Vector3(5.6, 1.25, 2.5), "size": Vector3(0.8, 2.5, 0.15), "color": WALL, "opts": wall_panel},
@@ -79,6 +81,9 @@ static func data() -> Dictionary:
 		"hackables": [
 			{"name": "SmartTV", "kind": "tv", "label": "Smart TV", "pos": Vector3(-0.5, 0, 4.75), "yaw": 0.0, "seconds": 7.0},
 			{"name": "SmartLamp", "kind": "lights", "label": "Smart lamp", "pos": Vector3(-5.4, 0, 4.4), "seconds": 10.0},
+		],
+		"anchors": [
+			{"name": "Hook_WallShelf", "pos": Vector3(-3.5, 2.45, 4.95), "landing": Vector3(-3.5, 1.95, 4.65)},
 		],
 		"doors": [
 			{"name": "PantryDoor", "label": "Pantry door", "pos": Vector3(4.7, 1.1, 2.5)},

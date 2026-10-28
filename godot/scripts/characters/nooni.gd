@@ -21,6 +21,11 @@ const Hackable := preload("res://scripts/puzzle/hackable.gd")
 @export var jump_height := 0.9
 @export var gravity := 20.0
 
+@export_group("Grapple")
+@export var grapple_aim_degrees := 9.0
+@export var grapple_speed := 20.0
+@export var grapple_cooldown_seconds := 1.2
+
 @export_group("Body")
 @export var body_radius := 0.35
 @export var stand_height := 1.8
@@ -35,6 +40,17 @@ var crouching := false
 var stress: Node
 ## Detective Vision (hold right mouse); hack gadgets with E while it is on.
 var vision: Node
+## The grapple hook under the crosshair, if any (aim the camera at it, then click).
+var grapple_target: Node
+var grapple_cooldown_left := 0.0
+
+var _zipping := false
+var _zip_t := 0.0
+var _zip_duration := 0.5
+var _zip_from := Vector3.ZERO
+var _zip_to := Vector3.ZERO
+var _zip_anchor: Node
+var _rope: MeshInstance3D
 var current_height := 1.8
 
 var _shape: CapsuleShape3D
@@ -64,6 +80,20 @@ func _ready() -> void:
 	stress.name = "StressMeter"
 	stress.character = self
 	add_child(stress)
+
+	_rope = MeshInstance3D.new()
+	var rope_mesh := CylinderMesh.new()
+	rope_mesh.top_radius = 0.02
+	rope_mesh.bottom_radius = 0.02
+	rope_mesh.height = 1.0
+	_rope.mesh = rope_mesh
+	var rope_mat := StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.85, 0.85, 0.9)
+	rope_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_rope.material_override = rope_mat
+	_rope.top_level = true
+	_rope.visible = false
+	add_child(_rope)
 
 	vision = DetectiveVision.new()
 	vision.name = "DetectiveVision"
@@ -131,6 +161,13 @@ func _build_look() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	grapple_cooldown_left = maxf(0.0, grapple_cooldown_left - delta)
+	if _zipping:
+		_tick_zip(delta)
+		_animate(delta)
+		return
+	_update_grapple_target()
+
 	var move_input := Vector2.ZERO
 	var sprint := false
 	var jump := false
@@ -140,6 +177,8 @@ func _physics_process(delta: float) -> void:
 			_toggle_crouch()
 		if Input.is_action_just_pressed("wipe_glasses"):
 			stress.wipe()
+		if Input.is_action_just_pressed("grapple"):
+			try_grapple()
 		if vision.active and Input.is_action_just_pressed("interact"):
 			Hackable.try_hack(get_tree(), global_position)
 		move_input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -171,6 +210,91 @@ func _physics_process(delta: float) -> void:
 	current_height = move_toward(current_height, target_height, crouch_transition_speed * delta)
 	_apply_height()
 	_animate(delta)
+
+
+# ---- Grapple -------------------------------------------------------------------------
+
+## The best hook near the crosshair that is in range and not behind a wall, or null.
+func _update_grapple_target() -> void:
+	var best: Node = null
+	if input_enabled and grapple_cooldown_left <= 0.0:
+		var cam := get_camera()
+		var from := cam.global_position
+		var forward := -cam.global_transform.basis.z
+		var chest := global_position + Vector3.UP * 1.2
+		var best_angle := deg_to_rad(grapple_aim_degrees)
+		for anchor in get_tree().get_nodes_in_group("grapple_anchor"):
+			var to: Vector3 = anchor.global_position - from
+			if to.length() < 1.5 or chest.distance_to(anchor.global_position) > anchor.max_range:
+				continue
+			var angle := forward.angle_to(to)
+			if angle > best_angle:
+				continue
+			# Line of sight to just short of the hook (it sits on a surface).
+			var stop: Vector3 = anchor.global_position - (anchor.global_position - chest).normalized() * 0.2
+			var query := PhysicsRayQueryParameters3D.create(chest, stop, 1)
+			if not get_world_3d().direct_space_state.intersect_ray(query).is_empty():
+				continue
+			best = anchor
+			best_angle = angle
+	if best != grapple_target:
+		if grapple_target:
+			grapple_target.set_targeted(false)
+		grapple_target = best
+		if grapple_target:
+			grapple_target.set_targeted(true)
+
+
+func try_grapple() -> bool:
+	if grapple_target == null or _zipping or grapple_cooldown_left > 0.0:
+		return false
+	_zip_anchor = grapple_target
+	_zip_from = global_position
+	_zip_to = _zip_anchor.landing
+	_zip_duration = clampf(_zip_from.distance_to(_zip_to) / grapple_speed, 0.25, 1.2)
+	_zip_t = 0.0
+	_zipping = true
+	velocity = Vector3.ZERO
+	set_crouching_instant(false)
+	_rope.visible = true
+	return true
+
+
+func _tick_zip(delta: float) -> void:
+	_zip_t = minf(1.0, _zip_t + delta / _zip_duration)
+	var k := _zip_t * _zip_t * (3.0 - 2.0 * _zip_t)
+	global_position = _zip_from.lerp(_zip_to, k) + Vector3.UP * sin(k * PI) * 0.6
+
+	var heading := _zip_to - _zip_from
+	heading.y = 0.0
+	if heading.length() > 0.1:
+		rotation.y = lerp_angle(rotation.y, atan2(-heading.x, -heading.z), minf(1.0, 14.0 * delta))
+	_update_rope()
+
+	if _zip_t >= 1.0:
+		_zipping = false
+		_rope.visible = false
+		global_position = _zip_to
+		velocity = Vector3.ZERO
+		grapple_cooldown_left = grapple_cooldown_seconds
+
+
+## Stretch the rope cylinder from her chest to the hook.
+func _update_rope() -> void:
+	var a := global_position + Vector3.UP * 1.2
+	var b: Vector3 = _zip_anchor.global_position
+	var along := b - a
+	var length := along.length()
+	if length < 0.01:
+		return
+	var y := along / length
+	var x := y.cross(Vector3.RIGHT if absf(y.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD).normalized()
+	var z := x.cross(y)
+	_rope.global_transform = Transform3D(Basis(x, y * length, z), (a + b) * 0.5)
+
+
+func can_release() -> bool:
+	return not _zipping
 
 
 ## Cape streams out behind her as she speeds up; long hair becomes a bun while crouched.

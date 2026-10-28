@@ -98,6 +98,23 @@ func _initialize() -> void:
 	await create_timer(0.5).timeout
 	room.nooni.stress.value = 0.0
 
+	# Grapple: crosshair on a hook, then mid-zip.
+	room.nooni.global_position = Vector3(-3.5, 0, 1.0)
+	room.nooni._yaw = PI
+	await create_timer(0.2).timeout
+	var toward: Vector3 = (room.get_node("Hook_WallShelf").global_position - room.nooni._pivot.global_position).normalized()
+	room.nooni._pitch = asin(toward.y) - 0.04
+	await create_timer(0.4).timeout
+	root.get_texture().get_image().save_png(out + "/shot_grapple_aim.png")
+	Input.action_press("grapple")
+	await create_timer(0.1).timeout
+	Input.action_release("grapple")
+	await create_timer(0.12).timeout
+	root.get_texture().get_image().save_png(out + "/shot_grapple_zip.png")
+	await create_timer(1.3).timeout
+	room.nooni.global_position = Vector3(-1.5, 0, 2.6)
+	room.nooni._pitch = -0.45
+
 	# Detective Vision: the glint, then the full view.
 	room.nooni.global_position = Vector3(-1.5, 0, 2.6)
 	room.nooni.set_crouching_instant(false)

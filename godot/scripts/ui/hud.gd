@@ -5,10 +5,12 @@ extends Node
 const MenuKit := preload("res://scripts/ui/menu_kit.gd")
 const GlassesOverlayScript := preload("res://scripts/ui/glasses_overlay.gd")
 const VisionOverlayScript := preload("res://scripts/ui/vision_overlay.gd")
+const ReticleScript := preload("res://scripts/ui/reticle.gd")
 const WheelUIScript := preload("res://scripts/ui/cat_wheel_ui.gd")
 
 var level: Node
 var wheel_ui: Control
+var reticle: Control
 var glasses: Control
 var vision_overlay: Control
 var message_label: Label
@@ -64,6 +66,10 @@ func setup(level_node: Node) -> void:
 	_stress_bar = MenuKit.bar(Color(0.4, 0.85, 0.5))
 	_stress_fill = _stress_bar.get_theme_stylebox("fill")
 	box.add_child(_stress_bar)
+
+	reticle = ReticleScript.new()
+	reticle.level = level
+	layer.add_child(reticle)
 
 	wheel_ui = WheelUIScript.new()
 	layer.add_child(wheel_ui)
