@@ -14,7 +14,7 @@ func _ready() -> void:
 		box.size = size
 		mesh.mesh = box
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.2, 0.6, 1.0, 0.15)
+		mat.albedo_color = Color(0.2, 0.6, 1.0, 0.1)
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED

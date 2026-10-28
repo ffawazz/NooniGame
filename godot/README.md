@@ -1,7 +1,7 @@
 # Nooni's Tactical Guide to Everyday Life: Godot version
 
 Godot 4.4 (GDScript). One-room greybox stealth prototype: Nooni sneaks past Yasser using crouch and cover.
-Everything in the room is built in code, so there is no scene to assemble by hand.
+Everything in the room is built in code, so there is no scene to assemble by hand. The look is cel-shaded: a toon shader (hard light bands, tinted shadows, rim light) plus an inverted-hull black outline, so it works on the lightweight Compatibility renderer.
 
 ## Run it
 1. Download **Godot 4.4.x (standard, not .NET)** from https://godotengine.org/download. It is a single `.exe`, with no installer.
@@ -26,6 +26,9 @@ Runs 26 checks in the real room: vision-cone maths, detection (standing vs crouc
 Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tests/screenshot.gd -- <out_dir>`.
 
 ![Start view](../docs/screenshots/start_view.png)
+![Nooni](../docs/screenshots/nooni.png)
+![Nooni crouched, hair tied up](../docs/screenshots/nooni_crouched.png)
+![Yasser](../docs/screenshots/yasser.png)
 ![Overhead, Yasser noticing Nooni](../docs/screenshots/overhead_spotted.png)
 
 ## Layout
@@ -35,4 +38,5 @@ Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tes
 - `scripts/ai/vision_math.gd`: cone maths (unit-tested)
 - `scripts/stealth/cover_volume.gd`: hiding boxes
 - `scripts/core/input_actions.gd`: input map, registered in code
+- `scripts/core/toon.gd` + `shaders/toon.gdshader`, `shaders/outline.gdshader`: the cel-shaded look; every mesh is built through `toon.gd`
 - `tests/run_tests.gd`: headless checks

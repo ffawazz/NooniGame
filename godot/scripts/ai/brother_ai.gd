@@ -9,6 +9,7 @@ extends CharacterBody3D
 ## seen spot and looks around) -> back to PATROL. CAUGHT is terminal.
 
 const VisionMath := preload("res://scripts/ai/vision_math.gd")
+const Toon := preload("res://scripts/core/toon.gd")
 
 signal caught(brother)
 
@@ -76,27 +77,22 @@ func _build_body() -> void:
 	collision.position.y = 0.95
 	add_child(collision)
 
-	var body := MeshInstance3D.new()
-	var mesh := CapsuleMesh.new()
-	mesh.radius = 0.5
-	mesh.height = 1.9
-	body.mesh = mesh
-	body.position.y = 0.95
-	var body_mat := StandardMaterial3D.new()
-	body_mat.albedo_color = Color(0.85, 0.35, 0.3)
-	body.material_override = body_mat
-	add_child(body)
+	# Cel-shaded Yasser: red hoodie, dark hair, and a visor that doubles as the alert lamp.
+	Toon.capsule(self, 0.48, 1.45, Vector3(0, 0.725, 0), Color(0.82, 0.28, 0.27))
+	Toon.sphere(self, 0.29, Vector3(0, 1.6, 0), Color(0.87, 0.66, 0.52))
+	var hair := Toon.sphere(self, 0.31, Vector3(0, 1.68, 0.05), Color(0.12, 0.08, 0.07))
+	hair.scale = Vector3(1.0, 0.8, 1.0)
 
-	# Lamp on the forward (-Z) side: also the alert indicator.
-	var lamp_mesh := MeshInstance3D.new()
+	var visor := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(0.3, 0.2, 0.3)
-	lamp_mesh.mesh = box
-	lamp_mesh.position = Vector3(0.0, eye_height - 0.2, -0.5)
+	box.size = Vector3(0.5, 0.1, 0.1)
+	visor.mesh = box
+	visor.position = Vector3(0.0, eye_height - 0.02, -0.27)
 	_lamp = StandardMaterial3D.new()
 	_lamp.albedo_color = Color.GREEN
-	lamp_mesh.material_override = _lamp
-	add_child(lamp_mesh)
+	_lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	visor.material_override = _lamp
+	add_child(visor)
 
 	_agent = NavigationAgent3D.new()
 	_agent.path_desired_distance = 0.7  # navmesh floats ~0.4 m above the floor, so be generous
