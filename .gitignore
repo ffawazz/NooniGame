@@ -14,3 +14,8 @@
 *.pdb.meta
 *.mdb.meta
 .DS_Store
+
+# Godot
+.godot/
+*.translation
+/godot/.import/
