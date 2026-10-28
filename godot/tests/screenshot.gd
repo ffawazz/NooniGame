@@ -30,7 +30,26 @@ func _initialize() -> void:
 	_closeup(close, room.yasser, 3.6, 1.0)
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png(out + "/shot_yasser.png")
+	# Bruce, standing and then flopped for a Bat-Nap.
+	room.bruce.global_position = Vector3(-4.4, 0, -2.0)
+	room.bruce.rotation.y = 0.0
+	_closeup(close, room.bruce, 2.6, 0.5)
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png(out + "/shot_bruce.png")
+	room.bruce.start_nap()
+	await create_timer(0.8).timeout
+	root.get_texture().get_image().save_png(out + "/shot_bruce_nap.png")
+	room.bruce.state = room.bruce.State.NORMAL
 	close.queue_free()
+	room.nooni.get_camera().current = true
+
+	# The Cat-ical Wheel, hovering Bruce, from Nooni's camera.
+	room.switcher.open_wheel()
+	room.switcher.hover_offset(Vector2(87, 50))
+	await create_timer(0.3, true, false, true).timeout
+	root.get_texture().get_image().save_png(out + "/shot_wheel.png")
+	room.switcher.close_wheel(false)
+	await create_timer(0.3).timeout
 
 	# Overhead view of the whole room.
 	var top := Camera3D.new()
@@ -45,6 +64,12 @@ func _initialize() -> void:
 	room.nooni.global_position = Vector3(0, 0, 1.5)
 	await create_timer(0.4).timeout
 	root.get_texture().get_image().save_png(out + "/shot_overhead_spotted.png")
+
+	# Bruce on the plate: the pantry door slides open.
+	room.nooni.global_position = Vector3(-3.2, 0, -4.3)
+	room.bruce.global_position = room.plate.global_position
+	await create_timer(1.2).timeout
+	root.get_texture().get_image().save_png(out + "/shot_overhead_door_open.png")
 	quit()
 
 

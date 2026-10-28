@@ -6,14 +6,15 @@ extends CharacterBody3D
 ## fills (faster when close); otherwise it drains. Awareness reaching 1 = caught.
 ##
 ## States: PATROL -> SUSPICIOUS (sees her, stops and stares) -> INVESTIGATE (lost her, walks to the last
-## seen spot and looks around) -> back to PATROL. CAUGHT is terminal.
+## seen spot and looks around) -> back to PATROL. CAUGHT is terminal. PETTED: Bruce's Bat-Nap froze him
+## for a while; he ignores everything, then forgets what he was doing and resumes his patrol.
 
 const VisionMath := preload("res://scripts/ai/vision_math.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 
 signal caught(brother)
 
-enum State { PATROL, SUSPICIOUS, INVESTIGATE, CAUGHT }
+enum State { PATROL, SUSPICIOUS, INVESTIGATE, CAUGHT, PETTED }
 
 @export_group("Patrol")
 @export var patrol_speed := 1.8
@@ -54,9 +55,12 @@ var _wait_timer := 0.0
 var _look_timer := 0.0
 var _arrived := false
 var _last_known := Vector3.ZERO
+var _petted_timer := 0.0
+var _hearts: Node3D
 
 
 func _ready() -> void:
+	add_to_group("brother")
 	collision_layer = 4  # brother
 	collision_mask = 1  # world
 	_build_body()
@@ -65,7 +69,8 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	_running = true
-	_enter(State.PATROL)
+	if state != State.PETTED:
+		_enter(State.PATROL)
 
 
 func _build_body() -> void:
@@ -94,6 +99,15 @@ func _build_body() -> void:
 	visor.material_override = _lamp
 	add_child(visor)
 
+	# Hearts that orbit his head while he is being petted.
+	_hearts = Node3D.new()
+	_hearts.position = Vector3(0, 2.35, 0)
+	_hearts.visible = false
+	add_child(_hearts)
+	for i in 3:
+		var a := TAU * i / 3.0
+		Toon.sphere(_hearts, 0.09, Vector3(sin(a), 0.0, cos(a)) * 0.35, Color(1.0, 0.45, 0.7), 0.015)
+
 	_agent = NavigationAgent3D.new()
 	_agent.path_desired_distance = 0.7  # navmesh floats ~0.4 m above the floor, so be generous
 	_agent.target_desired_distance = 0.7
@@ -118,7 +132,7 @@ func _physics_process(delta: float) -> void:
 	if not _running:
 		return
 
-	if state != State.CAUGHT:
+	if state != State.CAUGHT and state != State.PETTED:
 		_update_perception(delta)
 		if awareness >= 1.0:
 			_enter(State.CAUGHT)
@@ -130,6 +144,8 @@ func _physics_process(delta: float) -> void:
 			_tick_suspicious(delta)
 		State.INVESTIGATE:
 			_tick_investigate(delta)
+		State.PETTED:
+			_tick_petted(delta)
 		State.CAUGHT:
 			_stop(delta)
 
@@ -148,6 +164,8 @@ func state_name() -> String:
 			return "Suspicious"
 		State.INVESTIGATE:
 			return "Investigating"
+		State.PETTED:
+			return "Being petted"
 		_:
 			return "CAUGHT"
 
@@ -204,6 +222,7 @@ func _perceive(target: Node3D) -> float:
 
 func _enter(next: State) -> void:
 	state = next
+	_hearts.visible = next == State.PETTED
 	match next:
 		State.PATROL:
 			_lamp.albedo_color = Color.GREEN
@@ -216,6 +235,8 @@ func _enter(next: State) -> void:
 			_agent.target_position = _last_known
 			_arrived = false
 			_look_timer = look_around_seconds
+		State.PETTED:
+			_lamp.albedo_color = Color(1.0, 0.5, 0.75)
 		State.CAUGHT:
 			_lamp.albedo_color = Color.RED
 			caught.emit(self)
@@ -266,6 +287,28 @@ func _tick_investigate(delta: float) -> void:
 	rotate_y(deg_to_rad(look_around_deg_per_sec) * delta)
 	_look_timer -= delta
 	if _look_timer <= 0.0:
+		_enter(State.PATROL)
+
+
+func can_be_petted() -> bool:
+	return _running and state != State.CAUGHT and state != State.PETTED
+
+
+## Bruce's Bat-Nap: freeze in a petting animation for `seconds`. Returns false if he can't be petted now.
+func pet(seconds: float) -> bool:
+	if not can_be_petted():
+		return false
+	_petted_timer = seconds
+	_enter(State.PETTED)
+	return true
+
+
+func _tick_petted(delta: float) -> void:
+	_stop(delta)
+	_hearts.rotate_y(3.0 * delta)
+	_petted_timer -= delta
+	if _petted_timer <= 0.0:
+		awareness = 0.0
 		_enter(State.PATROL)
 
 

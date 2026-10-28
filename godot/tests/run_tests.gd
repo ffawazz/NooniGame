@@ -3,6 +3,7 @@ extends SceneTree
 ## Exits 0 when everything passes, 1 otherwise.
 
 const VisionMath := preload("res://scripts/ai/vision_math.gd")
+const WheelMath := preload("res://scripts/ui/wheel_math.gd")
 const RoomScene := preload("res://scenes/main.tscn")
 
 var failures := 0
@@ -33,6 +34,11 @@ func _run() -> void:
 	await _test_nooni_movement()
 	await _test_glimpse_then_investigate()
 	await _test_arrow_keys()
+	_test_wheel_math()
+	await _test_pressure_plate()
+	await _test_switching()
+	await _test_wheel_flow()
+	await _test_bat_nap()
 
 	print("")
 	if failures == 0:
@@ -196,3 +202,150 @@ func _test_arrow_keys() -> void:
 		_check(moved > 1.0, "%s key moves Nooni (%.1f m in 0.6 s)" % [OS.get_keycode_string(key), moved])
 		room.queue_free()
 		await process_frame
+
+
+## A room with Yasser parked harmlessly in the south-east corner, facing a wall.
+func _new_room() -> Node:
+	var room := RoomScene.instantiate()
+	room.test_mode = true
+	root.add_child(room)
+	await process_frame
+	room.yasser.hold_position = true
+	room.yasser.global_position = Vector3(5, 0, -4.2)
+	room.yasser.rotation.y = 0.0
+	return room
+
+
+func _test_wheel_math() -> void:
+	# Three slices: Nooni at 12 o'clock, Bruce lower right, Semba lower left. +Y is down on screen.
+	_check(WheelMath.select_slice(Vector2(0, -100), 3, 50.0) == 0, "wheel: up selects slice 0")
+	_check(WheelMath.select_slice(Vector2(87, 50), 3, 50.0) == 1, "wheel: lower right selects slice 1")
+	_check(WheelMath.select_slice(Vector2(-87, 50), 3, 50.0) == 2, "wheel: lower left selects slice 2")
+	_check(WheelMath.select_slice(Vector2(30, -100), 3, 50.0) == 0, "wheel: still inside slice 0's 120 degrees")
+	_check(WheelMath.select_slice(Vector2(10, 10), 3, 50.0) == -1, "wheel: dead zone selects nothing")
+
+
+func _test_pressure_plate() -> void:
+	var room := await _new_room()
+	var plate = room.plate
+	var door = room.door
+
+	room.nooni.global_position = plate.global_position
+	await create_timer(0.5).timeout
+	_check(not door.is_open, "Nooni alone (weight 1) can't open the heavy door (plate %.0f/%.0f)" % [plate.total_weight, plate.required_weight])
+
+	room.nooni.global_position = Vector3(-3.2, 0, -4.3)
+	room.bruce.global_position = plate.global_position
+	await create_timer(0.5).timeout
+	_check(door.is_open, "Bruce (weight 3) on the plate opens the door")
+	await create_timer(0.8).timeout
+	_check(door.is_fully_open(), "the door finishes sliding up")
+
+	room.bruce.global_position = Vector3(-4.4, 0, -4.2)
+	await create_timer(0.5).timeout
+	_check(not door.is_open, "stepping off the plate closes the door again")
+	room.queue_free()
+	await process_frame
+
+
+func _test_switching() -> void:
+	var room := await _new_room()
+	var sw = room.switcher
+	_check(sw.current == room.nooni and room.nooni.input_enabled, "game starts with Nooni in control")
+
+	_check(sw.request_switch(1), "switching to Bruce is accepted")
+	await create_timer(0.2).timeout
+	_check(sw.is_blending(), "the camera is blending")
+	_check(not room.bruce.input_enabled, "Bruce can't act until the blend ends")
+	await create_timer(0.8).timeout
+	_check(not sw.is_blending(), "the blend finishes")
+	_check(room.bruce.input_enabled and not room.nooni.input_enabled, "control passed from Nooni to Bruce")
+	_check(root.get_camera_3d() == room.bruce.get_camera(), "Bruce's camera is the live camera")
+
+	var nooni_start: Vector3 = room.nooni.global_position
+	var bruce_start: Vector3 = room.bruce.global_position
+	Input.action_press("move_forward")
+	await create_timer(0.6).timeout
+	Input.action_release("move_forward")
+	var bruce_moved: float = room.bruce.global_position.distance_to(bruce_start)
+	var nooni_moved: float = room.nooni.global_position.distance_to(nooni_start)
+	_check(bruce_moved > 0.5 and bruce_moved < 1.6, "Bruce is slow: %.1f m in 0.6 s (Nooni would do ~2 m)" % bruce_moved)
+	_check(nooni_moved < 0.05, "Nooni stays put while Bruce is played")
+
+	_check(not sw.request_switch(2), "the locked Semba slot refuses")
+	_check(sw.request_switch(0), "and we can switch back to Nooni")
+	await create_timer(0.8).timeout
+	_check(sw.current == room.nooni and room.nooni.input_enabled, "back in control of Nooni")
+	room.queue_free()
+	await process_frame
+
+
+func _test_wheel_flow() -> void:
+	var room := await _new_room()
+	var sw = room.switcher
+
+	_check(sw.open_wheel(), "holding Tab opens the wheel")
+	_check(is_equal_approx(Engine.time_scale, sw.slow_time_scale), "time slows down while the wheel is open")
+	_check(not room.nooni.input_enabled, "gameplay input is suspended while the wheel is open")
+	sw.hover_offset(Vector2(87, 50))
+	_check(sw.hovered == 1, "hovering lower right highlights Bruce")
+	await create_timer(0.3, true, false, true).timeout
+	sw.close_wheel(true)
+	_check(is_equal_approx(Engine.time_scale, 1.0), "time returns to normal on release")
+	_check(sw.current == room.bruce, "releasing over Bruce switches to him")
+	await create_timer(0.8).timeout
+
+	sw.open_wheel()
+	sw.hover_offset(Vector2(5, 5))
+	await create_timer(0.3, true, false, true).timeout
+	sw.close_wheel(true)
+	_check(sw.current == room.bruce and room.bruce.input_enabled, "releasing in the dead zone cancels (stays Bruce, input back)")
+
+	sw.open_wheel()
+	sw.hover_offset(Vector2(-87, 50))
+	await create_timer(0.3, true, false, true).timeout
+	sw.close_wheel(true)
+	_check(sw.current == room.bruce, "releasing over the locked Semba slot does nothing")
+
+	sw.open_wheel()
+	sw.close_wheel(true)  # an immediate tap
+	_check(sw.current == room.nooni, "a quick tap cycles to the next unlocked cat (skipping Semba)")
+	await create_timer(0.8).timeout
+	room.queue_free()
+	await process_frame
+
+
+func _test_bat_nap() -> void:
+	# Same set-up as the 'standing in clear view is caught' test, but with Bruce napping between them.
+	var room := await _new_room()
+	room.yasser.global_position = Vector3(-2, 0, 1)
+	room.yasser.rotation.y = 0.0
+	room.nooni.global_position = Vector3(-2, 0, -2.2)
+	room.bruce.global_position = Vector3(-2, 0, 0.2)
+
+	_check(room.bruce.start_nap(), "Bruce flops down for a Bat-Nap")
+	await create_timer(0.6).timeout
+	_check(room.yasser.state_name() == "Being petted", "a brother walking by is forced into petting")
+	_check(room.bruce.state_name() == "Purring", "Bruce purrs while he is petted")
+	await create_timer(2.5).timeout
+	_check(not room.yasser.is_caught(), "a petted Yasser doesn't catch Nooni standing in clear view")
+	room.queue_free()
+	await process_frame
+
+	# And it wears off: shorten the petting, hide Nooni, and watch both return to normal.
+	room = await _new_room()
+	room.yasser.global_position = Vector3(-2, 0, 1)
+	room.yasser.rotation.y = 0.0
+	room.nooni.global_position = Vector3(-2, 0, -3.9)
+	room.nooni.set_crouching_instant(true)
+	room.bruce.global_position = Vector3(-2, 0, 0.2)
+	room.bruce.pet_seconds = 1.0
+	room.bruce.cooldown_seconds = 0.5
+	room.bruce.start_nap()
+	await create_timer(0.5).timeout
+	_check(room.yasser.state_name() == "Being petted", "petting starts")
+	await create_timer(2.5).timeout
+	_check(room.yasser.state_name() != "Being petted", "Yasser snaps out of it after the petting ends")
+	_check(room.bruce.state_name() == "Ready", "Bruce recovers and can nap again")
+	room.queue_free()
+	await process_frame

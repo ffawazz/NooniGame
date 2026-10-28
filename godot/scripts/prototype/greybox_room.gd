@@ -1,25 +1,38 @@
 extends Node3D
-## Greybox stealth test room, built entirely in code: level, cover, Nooni, Yasser, exit, HUD.
+## Greybox stealth test room, built entirely in code: level, cover, Nooni, Bruce, Yasser, the pantry puzzle, HUD.
 ## Layout (metres, +X east, +Z south):
 ##   Nooni starts by the south wall, west of the sofa; the exit pad is in the opposite (+X, +Z) corner.
 ##   Yasser walks a loop through the middle; the sofa and counter are cover.
+##   The exit pad is locked in a pantry. Its door opens only while Bruce (weight 3) sits on the pressure plate;
+##   Nooni weighs too little. Bruce's Bat-Nap can freeze Yasser while Nooni sneaks past.
 
 const NooniScript := preload("res://scripts/characters/nooni.gd")
 const BrotherScript := preload("res://scripts/ai/brother_ai.gd")
 const CoverScript := preload("res://scripts/stealth/cover_volume.gd")
 const Toon := preload("res://scripts/core/toon.gd")
+const BruceScript := preload("res://scripts/characters/bruce.gd")
+const SwitcherScript := preload("res://scripts/characters/character_switcher.gd")
+const WheelUIScript := preload("res://scripts/ui/cat_wheel_ui.gd")
+const PlateScript := preload("res://scripts/puzzle/pressure_plate.gd")
+const DoorScript := preload("res://scripts/puzzle/sliding_door.gd")
 
 ## Headless tests: no mouse capture, no auto-restart.
 var test_mode := false
 
 var nooni: CharacterBody3D
+var bruce: CharacterBody3D
 var yasser: CharacterBody3D
+var switcher: Node
+var door: AnimatableBody3D
+var plate: Area3D
 var exit_position := Vector3(5.0, 0.0, 4.0)
 var goal_radius := 1.2
 var restart_delay := 2.5
 
 var _finished := false
 var _status_label: Label
+var _door_label: Label
+var _wheel_ui: Control
 var _brother_label: Label
 var _awareness_bar: ProgressBar
 var _message_label: Label
@@ -31,8 +44,10 @@ func _ready() -> void:
 	_build_cover()
 	_build_decor()
 	_build_characters()
+	_build_plate()
 	_build_exit()
 	_build_hud()
+	_build_switcher()
 
 
 func _physics_process(_delta: float) -> void:
@@ -45,7 +60,8 @@ func _physics_process(_delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
-	_status_label.text = "Nooni: " + nooni.status_text()
+	_status_label.text = "%s: %s" % [switcher.current.display_name, switcher.current.status_text()]
+	_door_label.text = "Pantry door: %s" % ("OPEN" if door.is_open else "LOCKED (a heavy cat on the plate opens it)")
 	_brother_label.text = "Yasser: " + yasser.state_name()
 	_awareness_bar.value = yasser.awareness
 
@@ -95,6 +111,17 @@ func _build_level() -> void:
 	_box(region, "Counter", Vector3(4.5, 0.5, -1), Vector3(1, 1, 3), Color(0.85, 0.55, 0.35))
 	_box(region, "CoffeeTable", Vector3(-0.5, 0.25, 0), Vector3(1.6, 0.5, 0.8), Color(0.5, 0.33, 0.24))
 
+	# Pantry in the north-east corner. The exit pad is inside, behind a door that Bruce can open.
+	var panel_color := Color(0.93, 0.8, 0.62)
+	_box(region, "Pantry_West", Vector3(3.2, 1.25, 3.75), Vector3(0.15, 2.5, 2.5), panel_color, wall_panel)
+	_box(region, "Pantry_South_A", Vector3(3.7, 1.25, 2.5), Vector3(1.0, 2.5, 0.15), panel_color, wall_panel)
+	_box(region, "Pantry_South_B", Vector3(5.6, 1.25, 2.5), Vector3(0.8, 2.5, 0.15), panel_color, wall_panel)
+	_box(region, "Pantry_Lintel", Vector3(4.7, 2.4, 2.5), Vector3(1.0, 0.2, 0.15), panel_color, wall_panel)
+	door = DoorScript.new()
+	door.name = "PantryDoor"
+	door.position = Vector3(4.7, 1.1, 2.5)
+	region.add_child(door)
+
 	var nav_mesh := NavigationMesh.new()
 	nav_mesh.agent_radius = 0.5
 	nav_mesh.agent_height = 2.0
@@ -143,6 +170,13 @@ func _build_characters() -> void:
 	nooni.rotation.y = -PI * 0.5  # facing +X
 	add_child(nooni)
 
+	bruce = BruceScript.new()
+	bruce.name = "Bruce"
+	bruce.test_mode = test_mode
+	bruce.position = Vector3(-4.4, 0, -4.2)
+	bruce.rotation.y = -PI * 0.5
+	add_child(bruce)
+
 	yasser = BrotherScript.new()
 	yasser.name = "Yasser"
 	yasser.position = Vector3(-3, 0, 1.5)
@@ -154,6 +188,22 @@ func _build_characters() -> void:
 	yasser.patrol_points = route
 	yasser.caught.connect(_on_caught)
 	add_child(yasser)
+
+
+func _build_plate() -> void:
+	plate = PlateScript.new()
+	plate.name = "PressurePlate"
+	plate.position = Vector3(0.5, 0, 3.8)
+	plate.target = door
+	add_child(plate)
+
+
+func _build_switcher() -> void:
+	switcher = SwitcherScript.new()
+	switcher.name = "CharacterSwitcher"
+	switcher.test_mode = test_mode
+	add_child(switcher)
+	switcher.setup([nooni, bruce, null], _wheel_ui, 0)  # Semba's slot stays locked for now
 
 
 func _build_exit() -> void:
@@ -182,6 +232,8 @@ func _build_hud() -> void:
 	box.add_child(_status_label)
 	_brother_label = _hud_label()
 	box.add_child(_brother_label)
+	_door_label = _hud_label()
+	box.add_child(_door_label)
 
 	_awareness_bar = ProgressBar.new()
 	_awareness_bar.min_value = 0.0
@@ -192,8 +244,11 @@ func _build_hud() -> void:
 	box.add_child(_awareness_bar)
 
 	var help := _hud_label()
-	help.text = "WASD/arrows move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Esc free mouse"
+	help.text = "WASD/arrows move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Q ability | Hold Tab: cat wheel | 1/2 switch | Esc free mouse"
 	box.add_child(help)
+
+	_wheel_ui = WheelUIScript.new()
+	layer.add_child(_wheel_ui)
 
 	_message_label = _hud_label()
 	_message_label.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -246,7 +301,10 @@ func _finish(message: String) -> void:
 		return
 	_finished = true
 	_message_label.text = message
-	nooni.input_enabled = false
+	switcher.close_wheel(false)
+	switcher.locked = true
+	for character in [nooni, bruce]:
+		character.input_enabled = false
 	if not test_mode:
 		await get_tree().create_timer(restart_delay).timeout
 		get_tree().reload_current_scene()
