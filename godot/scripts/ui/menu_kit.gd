@@ -1,4 +1,6 @@
 extends RefCounted
+
+const Game := preload("res://scripts/core/game.gd")
 ## Styling helpers so every menu, panel and caption shares one look (dark ink, warm gold, big rounded buttons).
 
 const INK := Color(0.07, 0.05, 0.11)
@@ -30,6 +32,7 @@ static func button(text: String, on_press: Callable, width := 340.0) -> Button:
 	node.add_theme_stylebox_override("pressed", _box(Color(0.95, 0.7, 0.25), Color.WHITE))
 	node.add_theme_stylebox_override("focus", _box(Color(0.3, 0.24, 0.5), GOLD))
 	node.add_theme_stylebox_override("disabled", _box(Color(0.14, 0.12, 0.2), Color(0.25, 0.22, 0.34)))
+	node.pressed.connect(func(): Game.sfx("ui_click"))
 	node.pressed.connect(on_press)
 	return node
 

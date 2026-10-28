@@ -18,6 +18,7 @@ var _level_box: VBoxContainer
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Game.music("music_menu")
 	_build_backdrop()
 	_build_ui()
 

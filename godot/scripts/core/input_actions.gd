@@ -18,6 +18,7 @@ const KEYS := {
 	"switch_2": [KEY_2],
 	"switch_3": [KEY_3],
 	"pause": [KEY_ESCAPE],
+	"horn": [KEY_H],
 }
 
 const MOUSE := {

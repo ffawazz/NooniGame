@@ -8,50 +8,86 @@ const Levels := preload("res://scripts/levels/levels.gd")
 const RoomScene := preload("res://scenes/level.tscn")
 
 var failures := 0
+## Pass a section name after `--` to run only that section, e.g.  -s res://tests/run_tests.gd -- driving
+var _only := ''
 
 
 func _initialize() -> void:
 	# Autoloads aren't started by `godot -s`, so install our own GameState node where the game expects it.
-	var state := preload("res://scripts/core/game_state.gd").new()
-	state.name = "GameState"
+	var state = root.get_node_or_null("GameState")
+	if state == null:
+		state = preload("res://scripts/core/game_state.gd").new()
+		state.name = "GameState"
+		root.add_child(state)
 	state.test_mode = true  # no scene changes, never touch the real save
-	root.add_child(state)
 	# Nodes added to the root during _initialize don't get _ready until the first frame.
 	await process_frame
 	_run()
 
 
 func _run() -> void:
-	_test_vision_math()
+	var args := OS.get_cmdline_user_args()
+	_only = args[0] if args.size() > 0 else ""
+	if _want("vision_math"):
+		_test_vision_math()
 
-	# Same spot in clear view of Yasser; only Nooni's stance differs.
-	# Yasser at (-2,0,1) faces -Z; Nooni at (-2,0,-2.2) is inside the sofa cover zone.
-	await _scenario("standing in clear view is caught", Vector3(-2, 0, 1), 0.0, Vector3(-2, 0, -2.2), false, true)
-	await _scenario("crouched inside cover is never seen", Vector3(-2, 0, 1), 0.0, Vector3(-2, 0, -2.2), true, false)
+	if _want("detection"):
+		# Same spot in clear view of Yasser; only Nooni's stance differs.
+		# Yasser at (-2,0,1) faces -Z; Nooni at (-2,0,-2.2) is inside the sofa cover zone.
+		await _scenario("standing in clear view is caught", Vector3(-2, 0, 1), 0.0, Vector3(-2, 0, -2.2), false, true)
+		await _scenario("crouched inside cover is never seen", Vector3(-2, 0, 1), 0.0, Vector3(-2, 0, -2.2), true, false)
 
-	# Yasser at (-5,0,1.5) faces +X; Nooni 6 m ahead in the open (no cover): standing range 9, crouched range 4.5.
-	await _scenario("standing at 6 m is caught", Vector3(-5, 0, 1.5), -PI * 0.5, Vector3(1, 0, 1.5), false, true)
-	await _scenario("crouched in the open at 6 m is not seen", Vector3(-5, 0, 1.5), -PI * 0.5, Vector3(1, 0, 1.5), true, false)
+		# Yasser at (-5,0,1.5) faces +X; Nooni 6 m ahead in the open (no cover): standing range 9, crouched range 4.5.
+		await _scenario("standing at 6 m is caught", Vector3(-5, 0, 1.5), -PI * 0.5, Vector3(1, 0, 1.5), false, true)
+		await _scenario("crouched in the open at 6 m is not seen", Vector3(-5, 0, 1.5), -PI * 0.5, Vector3(1, 0, 1.5), true, false)
 
-	# Behind Yasser: outside the cone.
-	await _scenario("standing behind him is not seen", Vector3(-5, 0, 1.5), -PI * 0.5, Vector3(-5.8, 0, 1.5), false, false)
+		# Behind Yasser: outside the cone.
+		await _scenario("standing behind him is not seen", Vector3(-5, 0, 1.5), -PI * 0.5, Vector3(-5.8, 0, 1.5), false, false)
 
-	await _test_patrol()
-	await _test_nooni_movement()
-	await _test_glimpse_then_investigate()
-	await _test_arrow_keys()
-	_test_wheel_math()
-	await _test_pressure_plate()
-	await _test_switching()
-	await _test_wheel_flow()
-	await _test_bat_nap()
-	await _test_semba_climbing()
-	await _test_mighty_roar()
-	await _test_win_through_door()
-	await _test_stress_and_smudge()
-	await _test_framework()
-	await _test_vision_and_hacking()
-	await _test_grapple()
+	if _want("patrol"):
+		await _test_patrol()
+	if _want("nooni_movement"):
+		await _test_nooni_movement()
+	if _want("glimpse_then_investigate"):
+		await _test_glimpse_then_investigate()
+	if _want("arrow_keys"):
+		await _test_arrow_keys()
+	if _want("wheel_math"):
+		_test_wheel_math()
+	if _want("pressure_plate"):
+		await _test_pressure_plate()
+	if _want("switching"):
+		await _test_switching()
+	if _want("wheel_flow"):
+		await _test_wheel_flow()
+	if _want("bat_nap"):
+		await _test_bat_nap()
+	if _want("semba_climbing"):
+		await _test_semba_climbing()
+	if _want("mighty_roar"):
+		await _test_mighty_roar()
+	if _want("win_through_door"):
+		await _test_win_through_door()
+	if _want("stress_and_smudge"):
+		await _test_stress_and_smudge()
+	if _want("framework"):
+		await _test_framework()
+	if _want("vision_and_hacking"):
+		await _test_vision_and_hacking()
+	if _want("grapple"):
+		await _test_grapple()
+	if _want("levels_solvable"):
+		await _test_levels_solvable()
+	if _want("level_two"):
+		await _test_level_two()
+	if _want("courtyard_and_exam_hall"):
+		await _test_courtyard_and_exam_hall()
+	if _want("driving"):
+		await _test_driving()
+	if _want("audio"):
+		await _test_audio()
+	if _want("playthrough"):
+		await _test_playthrough()
 
 	print("")
 	if failures == 0:
@@ -59,6 +95,10 @@ func _run() -> void:
 	else:
 		print("%d TEST(S) FAILED" % failures)
 	quit(1 if failures > 0 else 0)
+
+
+func _want(section: String) -> bool:
+	return _only == "" or _only == section
 
 
 func _check(condition: bool, label: String) -> void:
@@ -631,7 +671,9 @@ func _test_framework() -> void:
 	# Every level in the registry has the data the builder needs.
 	for i in Levels.count():
 		var data := Levels.data(i)
-		for key in ["title", "objective", "solids", "spawns", "exit", "story_intro", "story_outro"]:
+		var keys := ["title", "objective", "story_intro", "story_outro"]
+		keys.append_array(["length", "time_limit", "lights"] if Levels.info(i).kind == "drive" else ["solids", "spawns", "exit"])
+		for key in keys:
 			_check(data.has(key), "level %d has '%s'" % [i + 1, key])
 
 	# The HUD has a row per brother.
@@ -874,3 +916,480 @@ func _test_grapple() -> void:
 	_check(nooni.grapple_target == null, "a wall between her and the hook blocks the shot")
 	room.queue_free()
 	await process_frame
+
+
+## Every level: the exit is reachable on foot once the doors are open, and every brother can walk his route.
+func _test_levels_solvable() -> void:
+	for i in Levels.count():
+		if Levels.info(i).kind != "stealth":
+			continue
+		var room := RoomScene.instantiate()
+		room.level_index = i
+		room.test_mode = true
+		root.add_child(room)
+		await create_timer(0.4).timeout
+		var label: String = room.data.title
+
+		for door in room.doors.values():
+			door.set_open(true)
+		await create_timer(1.0).timeout
+		# The navmesh sits ~0.4 m above the floor, so an open door's lower edge still blocks a brother-sized
+		# agent; lift opened doors clear to check the layout itself.
+		for door in room.doors.values():
+			door.position.y += 3.0
+		await physics_frame
+		var region: NavigationRegion3D = room.get_node("World")
+		region.bake_navigation_mesh(false)
+		await physics_frame
+		await physics_frame
+		await physics_frame
+		var map: RID = room.get_world_3d().navigation_map
+
+		var path := NavigationServer3D.map_get_path(map, room.nooni.global_position, room.exit_position, true)
+		var reach: float = path[path.size() - 1].distance_to(room.exit_position) if path.size() > 0 else 99.0
+		_check(path.size() > 0 and reach < room.goal_radius + 0.8, "%s: the exit is reachable on foot (path ends %.1f m from it)" % [label, reach])
+
+		for brother in room.brothers:
+			var ok := true
+			for point in brother.patrol_points:
+				var route := NavigationServer3D.map_get_path(map, brother.global_position, point, true)
+				if route.size() == 0 or route[route.size() - 1].distance_to(point) > 1.0:
+					ok = false
+			_check(ok, "%s: %s can walk every point of his patrol" % [label, brother.name])
+
+		for cat in [room.bruce, room.semba]:
+			if cat:
+				var cat_path := NavigationServer3D.map_get_path(map, cat.global_position, room.nooni.global_position, true)
+				_check(cat_path.size() > 0, "%s: %s can reach Nooni" % [label, cat.name])
+		room.queue_free()
+		await process_frame
+
+
+## A level other than the first, with every brother parked harmlessly facing a wall.
+func _new_level(index: int) -> Node:
+	var room := RoomScene.instantiate()
+	room.level_index = index
+	room.test_mode = true
+	root.add_child(room)
+	await create_timer(0.3).timeout
+	for brother in room.brothers:
+		brother.hold_position = true
+		brother.view_distance = 0.1  # parked and blind: these tests are about the puzzles
+	return room
+
+
+func _test_level_two() -> void:
+	var room := await _new_level(1)
+	var door = room.doors["GarageDoor"]
+	_check(room.brothers.size() == 2 and room.brothers[1].kind == "ahmed", "level 2 has Yasser and Ahmed")
+	_check(room.brothers[1].view_angle < room.brothers[0].view_angle and room.brothers[1].view_distance == 0.1, "Ahmed has his own senses (narrow cone)")
+
+	# 1) Smart lock: hack it with Detective Vision from the console table; the door opens, then closes again.
+	room.nooni.global_position = Vector3(4.2, 0, 3.6)
+	Input.action_press("vision")
+	await create_timer(0.2).timeout
+	Input.action_press("interact")
+	await create_timer(0.1).timeout
+	Input.action_release("interact")
+	await create_timer(0.8).timeout
+	_check(door.is_open and door.is_fully_open(), "hacking the smart lock opens the garage door")
+	Input.action_release("vision")
+	room.get_node("SmartLock").effect_left = 0.3
+	await create_timer(0.8).timeout
+	_check(not door.is_open, "and it closes again after a while")
+
+	# 2) Bruce on the plate keeps it open.
+	room.bruce.global_position = room.plates[0].global_position
+	await create_timer(1.3).timeout
+	_check(door.is_fully_open(), "Bruce on the hall plate holds the garage door open")
+
+	# The doorway is wide enough to walk through.
+	room.nooni.global_position = Vector3(4.0, 0, 0.0)
+	room.nooni._yaw = -PI * 0.5  # camera looks east
+	Input.action_press("move_forward")
+	await create_timer(0.9).timeout
+	Input.action_release("move_forward")
+	_check(room.nooni.global_position.x > 5.4, "Nooni walks through the open garage door (x = %.1f)" % room.nooni.global_position.x)
+	room.queue_free()
+	await process_frame
+
+	# 3) Semba on the fridge roars: both brothers come.
+	room = await _new_level(1)
+	room.semba.global_position = Vector3(-8.4, 2.3, -3.2)
+	await create_timer(0.3).timeout
+	_check(room.semba.try_roar(), "Semba can roar from the top of the fridge")
+	await create_timer(0.3).timeout
+	var drawn := 0
+	for brother in room.brothers:
+		if brother.state_name() == "Drawn by a yowl":
+			drawn += 1
+	_check(drawn == 2, "both brothers are drawn by the yowl")
+	room.queue_free()
+	await process_frame
+
+	# 4) The smart speaker lures them too, and the lights hack halves their sight.
+	room = await _new_level(1)
+	room.get_node("SmartSpeaker").hack()
+	await create_timer(0.2).timeout
+	drawn = 0
+	for brother in room.brothers:
+		if brother.state_name() == "Drawn by a noise":
+			drawn += 1
+	_check(drawn == 2, "the smart speaker draws both brothers")
+	room.get_node("KitchenLamp").hack()
+	_check(room.brothers[0].vision_scale == 0.5 and room.brothers[1].vision_scale == 0.5, "the smart light halves both brothers' sight")
+	room.queue_free()
+	await process_frame
+
+
+func _test_courtyard_and_exam_hall() -> void:
+	# --- PNU Courtyard ---
+	var room := await _new_level(Levels.index_of("pnu_courtyard"))
+	var door = room.doors["LibraryDoor"]
+	_check(room.brothers.size() == 3 and room.brothers[0].kind == "guard", "the courtyard has two guards and Ahmed")
+	_check(room.brothers[0].view_angle > room.brothers[2].view_angle, "guards see a wider arc than Ahmed")
+
+	# Hack the library lock from beside the planter.
+	room.nooni.global_position = Vector3(3.5, 0, 6.0)
+	Input.action_press("vision")
+	await create_timer(0.2).timeout
+	Input.action_press("interact")
+	await create_timer(0.1).timeout
+	Input.action_release("interact")
+	Input.action_release("vision")
+	await create_timer(1.0).timeout
+	_check(door.is_open, "hacking the library lock opens the door")
+	room.queue_free()
+	await process_frame
+
+	# Bruce on the gate plate holds it open.
+	room = await _new_level(Levels.index_of("pnu_courtyard"))
+	room.bruce.global_position = room.plates[0].global_position
+	await create_timer(1.3).timeout
+	_check(room.doors["LibraryDoor"].is_fully_open(), "Bruce on the gate plate opens the library door")
+	room.queue_free()
+	await process_frame
+
+	# The grapple route: hook above the entrance, landing on the lobby balcony.
+	room = await _new_level(Levels.index_of("pnu_courtyard"))
+	var hook = room.get_node("Hook_Balcony")
+	room.nooni.global_position = Vector3(3.0, 0, 3.0)
+	room.nooni._yaw = PI
+	await create_timer(0.2).timeout
+	var toward: Vector3 = (hook.global_position - room.nooni._pivot.global_position).normalized()
+	room.nooni._pitch = asin(toward.y)
+	await create_timer(0.3).timeout
+	_check(room.nooni.grapple_target == hook, "the balcony hook can be targeted from the courtyard")
+	Input.action_press("grapple")
+	await create_timer(0.1).timeout
+	Input.action_release("grapple")
+	await create_timer(1.5).timeout
+	_check(room.nooni.global_position.distance_to(Vector3(3.0, 2.7, 8.8)) < 0.8 and room.nooni.global_position.z > 8.0, "she lands on the balcony inside the library (z = %.1f)" % room.nooni.global_position.z)
+	room.queue_free()
+	await process_frame
+
+	# --- Exam Hall ---
+	room = await _new_level(Levels.index_of("exam_hall"))
+	_check(room.time_limit() == 150.0 and room.hud._timer_label.visible, "the exam hall has a countdown")
+	_check(room.brothers.size() == 3 and room.brothers[0].kind == "professor", "the professor, Yasser and Ahmed patrol the hall")
+	_check(room.brothers[0].view_angle > 120.0 and room.brothers[0].patrol_speed < 1.5, "the professor is slow with a huge arc")
+	_check(not room._finished, "the exam hasn't started")
+	room._started_msec -= 151000  # the clock runs out
+	await create_timer(0.2).timeout
+	_check(room._finished and not room._won and room._message_label.text == "OUT OF TIME", "running out of time fails the level")
+	room.queue_free()
+	await process_frame
+
+	# And winning in time works: put Nooni on the seat.
+	room = await _new_level(Levels.index_of("exam_hall"))
+	room.nooni.global_position = room.exit_position
+	await create_timer(0.3).timeout
+	_check(room._finished and room._won, "reaching Seat 42 in time wins the finale")
+	room.queue_free()
+	await process_frame
+
+
+func _new_drive() -> Node:
+	var drive = load("res://scenes/drive.tscn").instantiate()
+	drive.level_index = Levels.index_of("king_fahd_road")
+	drive.test_mode = true
+	root.add_child(drive)
+	await create_timer(0.3).timeout
+	return drive
+
+
+func _test_driving() -> void:
+	var drive := await _new_drive()
+	_check(drive.length == 1300.0 and drive.lights.size() == 3, "King Fahd Road is 1.3 km long with three stoplights")
+	_check(Levels.info(Levels.index_of("king_fahd_road")).kind == "drive", "it is registered as a driving level")
+
+	# Throttle, steering, braking.
+	Input.action_press("move_forward")
+	await create_timer(2.0).timeout
+	var top: float = drive.speed
+	_check(top > 15.0 and drive.distance > 15.0, "W accelerates the Mazda (%.0f km/h after 2 s)" % (top * 3.6))
+	Input.action_press("move_right")
+	await create_timer(0.6).timeout
+	Input.action_release("move_right")
+	_check(drive.lateral > 1.5, "D steers right (x = %.1f)" % drive.lateral)
+	Input.action_press("move_left")
+	await create_timer(4.0).timeout
+	Input.action_release("move_left")
+	_check(drive.lateral < 0.0 and drive.lateral >= -4.7, "A steers left and the road edge stops her (x = %.1f)" % drive.lateral)
+	Input.action_release("move_forward")
+	Input.action_press("move_back")
+	await create_timer(1.2).timeout
+	Input.action_release("move_back")
+	_check(drive.speed < top - 10.0 and drive.speed >= 0.0, "S brakes (%.0f km/h)" % (drive.speed * 3.6))
+	Input.action_press("move_forward")
+	await create_timer(8.0).timeout
+	Input.action_release("move_forward")
+	_check(drive.speed <= drive.max_speed + 0.01, "speed is capped (%.0f km/h)" % (drive.speed * 3.6))
+	drive.queue_free()
+	await process_frame
+
+	# Crashing into slower traffic costs speed and time.
+	drive = await _new_drive()
+	for other in drive.traffic:
+		other.queue_free()
+	drive.traffic.clear()
+	drive.speed = 20.0
+	drive._spawn_traffic(Vector3(drive.lateral, 0, -drive.distance - 6.0), Vector3(0, 0, -5.0), false)
+	await create_timer(0.7).timeout
+	_check(drive.crashes == 1 and is_equal_approx(drive.penalty, 4.0), "hitting a car counts one crash and adds a time penalty")
+	_check(drive.speed < 10.0, "and kills most of her speed (%.0f km/h)" % (drive.speed * 3.6))
+	await create_timer(0.5).timeout
+	_check(drive.crashes == 1, "the same car can't be hit twice")
+	drive.queue_free()
+	await process_frame
+
+	# Stoplights: red lights spawn cross traffic; hacking turns one green; the cycle turns them over by itself.
+	drive = await _new_drive()
+	var light = drive.lights[0]
+	light.green = false
+	light.hacked_left = 0.0
+	light._timer = 0.0
+	drive.distance = 250.0
+	drive._spawned_until = 1e9  # no ordinary traffic in this check
+	await create_timer(2.0).timeout
+	var crossing := 0
+	for other in drive.traffic:
+		if other.cross:
+			crossing += 1
+	_check(crossing > 0, "a red light 80 m ahead sends cross traffic through the junction (%d cars)" % crossing)
+	_check(drive.try_hack_light() == light and light.green, "E hacks the next red light to green")
+	_check(drive.try_hack_light() == null, "and the hack then recharges")
+	var before_cross := 0
+	for other in drive.traffic:
+		if other.cross:
+			before_cross += 1
+	await create_timer(3.0).timeout
+	var after_cross := 0
+	for other in drive.traffic:
+		if other.cross:
+			after_cross += 1
+	_check(after_cross <= before_cross, "no new cross traffic while it is green")
+	var cycler := preload("res://scripts/driving/stop_light.gd").new()
+	cycler.red_seconds = 0.2
+	cycler.green_seconds = 0.2
+	cycler.green = false
+	drive.add_child(cycler)
+	await process_frame
+	cycler._timer = 0.0
+	cycler.tick(0.3)
+	_check(cycler.green, "an unhacked light turns green on its own after its red phase")
+	drive.queue_free()
+	await process_frame
+
+	# Winning and losing.
+	drive = await _new_drive()
+	drive.distance = drive.length
+	await create_timer(0.2).timeout
+	_check(drive._finished and drive._won, "reaching PNU wins")
+	drive.queue_free()
+	await process_frame
+	drive = await _new_drive()
+	drive.penalty = 200.0
+	await create_timer(0.2).timeout
+	_check(drive._finished and not drive._won and drive._hud.message.text == "TOO LATE", "running out of time fails the drive")
+	drive.queue_free()
+	await process_frame
+
+
+func _test_audio() -> void:
+	# `godot -s` starts the autoloads, so use the real Audio node when there is one.
+	var audio = root.get_node_or_null("Audio")
+	var installed := audio == null
+	if installed:
+		audio = preload("res://scripts/core/audio.gd").new()
+		audio.name = "Audio"
+		root.add_child(audio)
+	await process_frame
+
+	# Every sound the game can ask for exists and loads.
+	var missing := []
+	for sound in audio.SFX_NAMES + audio.MUSIC_NAMES + ["engine"]:
+		if not ResourceLoader.exists("res://audio/%s.wav" % sound) or audio.stream(sound) == null:
+			missing.append(sound)
+	_check(missing.is_empty(), "all %d sound files load%s" % [audio.SFX_NAMES.size() + audio.MUSIC_NAMES.size() + 1, "" if missing.is_empty() else " (missing: %s)" % ", ".join(missing)])
+
+	# Effects play through the pool, music loops, the engine follows the speed.
+	audio.sfx("ui_click")
+	var playing := 0
+	for player in audio._pool:
+		if player.playing:
+			playing += 1
+	_check(playing >= 1, "a sound effect starts playing")
+	audio.play_music("music_stealth")
+	_check(audio.current_music() == "music_stealth" and audio._music.playing, "music starts")
+	_check(audio._music.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and audio._music.stream.loop_end > 100000, "and loops")
+	audio.engine(true, 0.0)
+	var idle_pitch: float = audio._engine.pitch_scale
+	audio.engine(true, 1.0)
+	_check(audio._engine.playing and audio._engine.pitch_scale > idle_pitch + 1.0, "the engine pitch rises with speed")
+	audio.engine(false)
+	_check(not audio._engine.playing, "and stops")
+
+	# Volumes follow the saved settings.
+	var state = root.get_node("GameState")
+	state.settings.music = 0.25
+	state.settings.master = 0.5
+	state.settings_changed.emit()
+	var music_db := AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music"))
+	var master_db := AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master"))
+	_check(absf(music_db - linear_to_db(0.25)) < 0.1 and absf(master_db - linear_to_db(0.5)) < 0.1, "the music and master sliders set the bus volumes")
+	state.settings.music = 0.6
+	state.settings.master = 0.8
+	state.settings_changed.emit()
+
+	# Game events trigger their sounds.
+	var room := await _new_room()
+	_check(audio.current_music() == "music_stealth", "a stealth level starts the stealth music")
+	var heard := func(sound: String) -> bool:
+		return audio.played.has(sound)
+	room.get_node("SmartTV").hack()
+	_check(heard.call("hack"), "hacking a gadget plays the hack sound")
+	room.nooni.global_position = Vector3(-3.5, 0, 1.0)
+	room.semba.global_position = Vector3(-5.72, 2.05, 3.2)
+	await create_timer(0.3).timeout
+	room.semba.try_roar()
+	_check(heard.call("roar"), "Semba's roar plays")
+	room.bruce.start_nap()
+	_check(heard.call("meow"), "Bruce's Bat-Nap plays a meow")
+	room.switcher.open_wheel()
+	_check(heard.call("wheel_open"), "opening the wheel plays its swoosh")
+	room.switcher.close_wheel(false)
+	room.bruce.global_position = room.plate.global_position
+	await create_timer(0.6).timeout
+	_check(heard.call("plate") or heard.call("door"), "the plate and the door make noise")
+	room.yasser.global_position = Vector3(-5, 0, 1.5)
+	room.yasser.rotation.y = -PI * 0.5
+	room.yasser.detection_seconds = 6.0
+	room.nooni.global_position = Vector3(1, 0, 1.5)
+	await create_timer(0.8).timeout
+	_check(heard.call("alert"), "a brother noticing Nooni plays the alert sting")
+	room.queue_free()
+	await process_frame
+
+	var drive := await _new_drive()
+	_check(audio.current_music() == "music_drive" and audio._engine.playing, "the driving level plays the drive music and engine")
+	drive.speed = 20.0
+	drive._spawn_traffic(Vector3(drive.lateral, 0, -drive.distance - 6.0), Vector3(0, 0, -5.0), false)
+	await create_timer(0.7).timeout
+	_check(heard.call("crash"), "a crash makes noise")
+	drive.queue_free()
+	await process_frame
+	_check(not audio._engine.playing, "leaving the drive stops the engine")
+
+	audio.stop_music()
+	if installed:
+		audio.queue_free()
+	await process_frame
+
+
+## A bot plays the real game: it follows a navigation path to the exit by steering Nooni's camera and holding W.
+## The brothers are parked and blind (we are testing the layout and Nooni's movement, not stealth).
+func _test_playthrough() -> void:
+	# Campaign flow: finishing each level unlocks the next, then the credits.
+	var state = root.get_node("GameState")
+	state.save_path = "user://test_campaign.cfg"
+	state.new_game()
+	_check(state.current_level == 0 and state.unlocked == 1, "a new game starts on level 1")
+	for i in Levels.count():
+		var more: bool = state.complete_level(30.0 + i, i)
+		_check(more == (i + 1 < Levels.count()), "level %d reports %s" % [i + 1, "more to come" if i + 1 < Levels.count() else "the end of the game"])
+		if more:
+			state.go_next()
+			_check(state.current_level == i + 1, "go_next moves to level %d" % (i + 2))
+	_check(state.unlocked == Levels.count(), "every level is unlocked at the end")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_campaign.cfg"))
+	state.unlocked = 1
+	state.results = {}
+	state.current_level = 0
+
+	for i in Levels.count():
+		match Levels.info(i).kind:
+			"stealth":
+				var room := await _new_level(i)
+				var label: String = room.data.title
+				var won := await _bot_walk_to_exit(room, 60.0)
+				_check(won, "%s: a bot walks Nooni from the start to the exit and wins (%.0f s)" % [label, room.elapsed_seconds()])
+				room.queue_free()
+				await process_frame
+			"drive":
+				var drive := await _new_drive()
+				drive.penalty = 0.0
+				drive._spawned_until = 1e9  # an empty road: this checks the course and the clock
+				for light in drive.lights:
+					light.green = true
+					light.hacked_left = 999.0
+				Input.action_press("move_forward")
+				var waited := 0.0
+				while not drive._finished and waited < 90.0:
+					await create_timer(0.5).timeout
+					waited += 0.5
+				Input.action_release("move_forward")
+				_check(drive._won, "King Fahd Road can be driven end to end in time (%.0f s of %.0f)" % [drive.total_seconds(), drive.time_limit()])
+				drive.queue_free()
+				await process_frame
+
+
+func _bot_walk_to_exit(room: Node, max_seconds: float) -> bool:
+	for door in room.doors.values():
+		door.set_open(true)
+	await create_timer(1.0).timeout
+	# Brother-sized navigation needs the open doors lifted clear; Nooni herself fits under them as they are.
+	for door in room.doors.values():
+		door.position.y += 3.0
+	await physics_frame
+	room.get_node("World").bake_navigation_mesh(false)
+	for i in 3:
+		await physics_frame
+	for door in room.doors.values():
+		door.position.y -= 3.0
+	var map: RID = room.get_world_3d().navigation_map
+	var path := NavigationServer3D.map_get_path(map, room.nooni.global_position, room.exit_position, true)
+	if path.size() < 2:
+		return false
+
+	var index := 1
+	var elapsed := 0.0
+	Input.action_press("move_forward")
+	while elapsed < max_seconds and not room._finished and index < path.size():
+		await physics_frame
+		elapsed += 1.0 / 60.0
+		var to: Vector3 = path[index] - room.nooni.global_position
+		to.y = 0.0
+		if to.length() < 0.5:
+			index += 1
+			continue
+		room.nooni._yaw = atan2(-to.x, -to.z)
+	# Walk the last stretch straight at the pad.
+	while elapsed < max_seconds and not room._finished:
+		await physics_frame
+		elapsed += 1.0 / 60.0
+		var to: Vector3 = room.exit_position - room.nooni.global_position
+		to.y = 0.0
+		room.nooni._yaw = atan2(-to.x, -to.z)
+	Input.action_release("move_forward")
+	return room._won

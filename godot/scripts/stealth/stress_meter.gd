@@ -1,4 +1,6 @@
 extends Node
+
+const Game := preload("res://scripts/core/game.gd")
 ## Nooni's stress meter, instead of a health bar.
 ##
 ## Stress RISES while a brother is closing in on spotting her (his awareness) and a little when one is simply
@@ -39,6 +41,7 @@ var wipe_t := 0.0
 var character: Node3D
 
 var _over := false
+var _beat := 0.0
 var _grace := 0.0
 var _wipe_from := 0.0
 
@@ -63,6 +66,15 @@ func _physics_process(delta: float) -> void:
 		value = maxf(0.0, value - (cover_calm_rate if hidden else calm_rate) * delta)
 
 	_update_smudge(delta)
+	_heartbeat(delta)
+
+
+## A thumping heartbeat under high stress, faster the more stressed she is (only while she is the one played).
+func _heartbeat(delta: float) -> void:
+	_beat -= delta
+	if value >= 0.5 and character.input_enabled and _beat <= 0.0:
+		Game.sfx("heartbeat", -8.0 + (value - 0.5) * 8.0)
+		_beat = lerpf(1.3, 0.6, (value - 0.5) * 2.0)
 
 
 func _update_smudge(delta: float) -> void:
@@ -96,4 +108,5 @@ func wipe() -> bool:
 	wiping = true
 	wipe_t = 0.0
 	_wipe_from = smudge
+	Game.sfx("wipe")
 	return true

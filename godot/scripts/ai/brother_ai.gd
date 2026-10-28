@@ -10,6 +10,7 @@ extends CharacterBody3D
 ## for a while; he ignores everything, then forgets what he was doing and resumes his patrol.
 ## LURED is INVESTIGATE with a flag: Semba's Mighty Roar sends him to the spot below the yowl to stare up.
 
+const Game := preload("res://scripts/core/game.gd")
 const VisionMath := preload("res://scripts/ai/vision_math.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 
@@ -322,6 +323,7 @@ func _enter(next: State) -> void:
 			_goto_current_patrol_point()
 		State.SUSPICIOUS:
 			_lamp.albedo_color = Color.YELLOW
+			Game.sfx("alert", -4.0)
 		State.INVESTIGATE:
 			_lamp.albedo_color = Color(0.35, 0.65, 1.0) if _lured else Color(1.0, 0.55, 0.0)
 			_agent.target_position = _last_known
@@ -329,8 +331,10 @@ func _enter(next: State) -> void:
 			_look_timer = _lure_seconds if _lured else look_around_seconds
 		State.PETTED:
 			_lamp.albedo_color = Color(1.0, 0.5, 0.75)
+			Game.sfx("purr")
 		State.CAUGHT:
 			_lamp.albedo_color = Color.RED
+			Game.sfx("caught")
 			caught.emit(self)
 
 

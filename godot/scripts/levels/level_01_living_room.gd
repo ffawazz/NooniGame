@@ -65,9 +65,9 @@ static func data() -> Dictionary:
 			{"name": "Bookshelf", "pos": Vector3(-5.75, 1.0, 3.2), "size": Vector3(0.5, 2.0, 2.0), "color": Color(0.62, 0.42, 0.28)},
 			{"name": "WallShelf", "pos": Vector3(-3.5, 1.85, 4.7), "size": Vector3(1.6, 0.1, 0.5), "color": Color(0.62, 0.42, 0.28)},
 			{"name": "Pantry_West", "pos": Vector3(3.2, 1.25, 3.75), "size": Vector3(0.15, 2.5, 2.5), "color": WALL, "opts": wall_panel},
-			{"name": "Pantry_South_A", "pos": Vector3(3.7, 1.25, 2.5), "size": Vector3(1.0, 2.5, 0.15), "color": WALL, "opts": wall_panel},
-			{"name": "Pantry_South_B", "pos": Vector3(5.6, 1.25, 2.5), "size": Vector3(0.8, 2.5, 0.15), "color": WALL, "opts": wall_panel},
-			{"name": "Pantry_Lintel", "pos": Vector3(4.7, 2.4, 2.5), "size": Vector3(1.0, 0.2, 0.15), "color": WALL, "opts": wall_panel},
+			{"name": "Pantry_South_A", "pos": Vector3(3.6, 1.25, 2.5), "size": Vector3(0.8, 2.5, 0.15), "color": WALL, "opts": wall_panel},
+			{"name": "Pantry_South_B", "pos": Vector3(5.7, 1.25, 2.5), "size": Vector3(0.6, 2.5, 0.15), "color": WALL, "opts": wall_panel},
+			{"name": "Pantry_Lintel", "pos": Vector3(4.7, 2.45, 2.5), "size": Vector3(1.4, 0.1, 0.15), "color": WALL, "opts": wall_panel},
 		],
 		"decor": decor,
 		"covers": [
@@ -86,7 +86,7 @@ static func data() -> Dictionary:
 			{"name": "Hook_WallShelf", "pos": Vector3(-3.5, 2.45, 4.95), "landing": Vector3(-3.5, 1.95, 4.65)},
 		],
 		"doors": [
-			{"name": "PantryDoor", "label": "Pantry door", "pos": Vector3(4.7, 1.1, 2.5)},
+			{"name": "PantryDoor", "label": "Pantry door", "pos": Vector3(4.7, 1.2, 2.5), "size": Vector3(1.4, 2.4, 0.15), "open_offset": Vector3(0, 2.5, 0)},
 		],
 		"plates": [
 			{"name": "PressurePlate", "pos": Vector3(0.5, 0, 3.8), "required": 2.0, "door": "PantryDoor"},

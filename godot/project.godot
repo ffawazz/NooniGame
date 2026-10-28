@@ -10,6 +10,7 @@ config/features=PackedStringArray("4.4")
 [autoload]
 
 GameState="*res://scripts/core/game_state.gd"
+Audio="*res://scripts/core/audio.gd"
 
 [display]
 

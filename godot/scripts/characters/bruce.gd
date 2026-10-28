@@ -6,6 +6,7 @@ extends "res://scripts/characters/playable_character.gd"
 ##    play someone else, so Bruce makes a trap that Nooni can sneak past.
 ## Brothers never "see" cats, so Bruce is not detectable.
 
+const Game := preload("res://scripts/core/game.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 
 enum State { NORMAL, NAPPING, PURRING, COOLDOWN }
@@ -143,6 +144,7 @@ func start_nap() -> bool:
 	if state != State.NORMAL:
 		return false
 	state = State.NAPPING
+	Game.sfx("meow")
 	return true
 
 

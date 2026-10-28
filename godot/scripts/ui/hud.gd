@@ -22,6 +22,7 @@ var _brother_rows: Array = []
 var _stress_bar: ProgressBar
 var _stress_fill: StyleBoxFlat
 var _wipe_hint: Label
+var _timer_label: Label
 
 
 func setup(level_node: Node) -> void:
@@ -81,6 +82,13 @@ func setup(level_node: Node) -> void:
 	_wipe_hint.visible = false
 	layer.add_child(_wipe_hint)
 
+	_timer_label = MenuKit.label("", 40, MenuKit.GOLD)
+	_timer_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_timer_label.position.y = 10.0
+	_timer_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_timer_label.visible = level.time_limit() > 0.0
+	layer.add_child(_timer_label)
+
 	message_label = MenuKit.label("", 40)
 	message_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -101,6 +109,11 @@ func _process(_delta: float) -> void:
 	for row in _brother_rows:
 		row.label.text = "%s: %s" % [row.brother.name, row.brother.state_name()]
 		row.bar.value = row.brother.awareness
+
+	if _timer_label.visible:
+		var left: float = maxf(0.0, level.time_limit() - level.elapsed_seconds())
+		_timer_label.text = MenuKit.format_time(left)
+		_timer_label.modulate = Color(1.0, 0.4, 0.4) if left < 30.0 else Color.WHITE
 
 	var stress = level.nooni.stress
 	_stress_bar.value = stress.value

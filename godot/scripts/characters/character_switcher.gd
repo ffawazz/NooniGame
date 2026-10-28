@@ -11,6 +11,7 @@ extends Node
 signal character_changed(previous, next)
 signal switch_denied(character)
 
+const Game := preload("res://scripts/core/game.gd")
 const WheelMath := preload("res://scripts/ui/wheel_math.gd")
 
 enum Mode { FREE, WHEEL, BLENDING }
@@ -95,6 +96,7 @@ func open_wheel() -> bool:
 
 	mode = Mode.WHEEL
 	hovered = -1
+	Game.sfx("wheel_open")
 	_opened_msec = Time.get_ticks_msec()
 	Engine.time_scale = slow_time_scale
 	current.input_enabled = false
@@ -193,6 +195,7 @@ func _begin_switch(index: int) -> void:
 	_blend_t = 0.0
 	if not test_mode:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	Game.sfx("switch")
 	character_changed.emit(previous, next)
 
 

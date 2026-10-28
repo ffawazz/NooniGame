@@ -7,6 +7,7 @@ extends Node3D
 
 signal hacked(device)
 
+const Game := preload("res://scripts/core/game.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 const MenuKit := preload("res://scripts/ui/menu_kit.gd")
 
@@ -178,6 +179,7 @@ func hack() -> bool:
 		"lock":
 			if target:
 				target.set_open(true)
+	Game.sfx("hack")
 	hacked.emit(self)
 	return true
 

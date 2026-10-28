@@ -89,6 +89,7 @@ func _ready() -> void:
 	_connect_hint_events()
 
 	_started_msec = Time.get_ticks_msec()
+	Game.music("music_stealth")
 	if not test_mode:
 		pause_menu = PauseMenuScript.new()
 		add_child(pause_menu)
@@ -109,10 +110,18 @@ func _physics_process(_delta: float) -> void:
 		return
 	if nooni.grapple_target != null:
 		_hint("grapple")
+	if time_limit() > 0.0 and elapsed_seconds() >= time_limit():
+		_finish(false, "OUT OF TIME", [data.get("time_up_text", "The clock beat her.")])
+		return
 	var d := nooni.global_position - exit_position
 	d.y = 0.0
 	if d.length() <= goal_radius:
 		_win()
+
+
+## Seconds allowed for this level, or 0 for no limit.
+func time_limit() -> float:
+	return data.get("time_limit", 0.0)
 
 
 ## Seconds since the level began (not counting time spent on the story card).
@@ -394,6 +403,10 @@ func _finish(won: bool, title: String, lines: Array) -> void:
 	_finished = true
 	_won = won
 	hud.message_label.text = title
+	if won:
+		Game.sfx("win")
+	elif title == "OUT OF TIME":
+		Game.sfx("caught")
 	switcher.close_wheel(false)
 	switcher.locked = true
 	for character in [nooni, bruce, semba]:

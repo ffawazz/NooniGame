@@ -19,3 +19,6 @@
 .godot/
 *.translation
 /godot/.import/
+
+# Exported builds
+/build/

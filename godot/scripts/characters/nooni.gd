@@ -7,6 +7,7 @@ extends "res://scripts/characters/playable_character.gd"
 ##   crouched in the open   -> crouched_visibility, plus up to stress_visibility_penalty when stressed
 ##   crouched inside cover  -> 0.0 (hidden)
 
+const Game := preload("res://scripts/core/game.gd")
 const CoverVolume := preload("res://scripts/stealth/cover_volume.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 const StressMeter := preload("res://scripts/stealth/stress_meter.gd")
@@ -257,6 +258,7 @@ func try_grapple() -> bool:
 	velocity = Vector3.ZERO
 	set_crouching_instant(false)
 	_rope.visible = true
+	Game.sfx("grapple_fire")
 	return true
 
 
@@ -277,6 +279,7 @@ func _tick_zip(delta: float) -> void:
 		global_position = _zip_to
 		velocity = Vector3.ZERO
 		grapple_cooldown_left = grapple_cooldown_seconds
+		Game.sfx("grapple_land")
 
 
 ## Stretch the rope cylinder from her chest to the hook.

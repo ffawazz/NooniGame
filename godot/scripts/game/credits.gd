@@ -29,6 +29,7 @@ var _scroll := 0.0
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Game.music("music_menu")
 	var bg := ColorRect.new()
 	bg.color = Color(0.04, 0.03, 0.09)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)

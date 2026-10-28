@@ -3,6 +3,7 @@ extends Area3D
 ## `required_weight` it is active and tells its `target` (anything with set_open(bool)) to open.
 ## Nooni weighs 1 and Bruce weighs 3, so a required weight of 2 can only be held down by Bruce.
 
+const Game := preload("res://scripts/core/game.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 
 signal changed(active: bool)
@@ -55,6 +56,7 @@ func _physics_process(_delta: float) -> void:
 		active = now_active
 		_refresh()
 		if active != was_active:
+			Game.sfx("plate")
 			if target:
 				target.set_open(active)
 			changed.emit(active)

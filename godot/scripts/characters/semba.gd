@@ -8,6 +8,7 @@ extends "res://scripts/characters/playable_character.gd"
 ##    out of sight while they cross the room.
 ## Brothers never "see" cats, so Semba is not detectable.
 
+const Game := preload("res://scripts/core/game.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 const Climbable := preload("res://scripts/puzzle/climbable.gd")
 
@@ -212,6 +213,7 @@ func try_roar() -> bool:
 	for brother in get_tree().get_nodes_in_group("brother"):
 		brother.lure(global_position, lure_seconds)
 	roared.emit(global_position)
+	Game.sfx("roar")
 	_spawn_shockwave()
 	return true
 

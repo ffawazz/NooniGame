@@ -1,67 +1,84 @@
-# Nooni's Tactical Guide to Everyday Life: Godot version
+# Nooni's Tactical Guide to Everyday Life (Godot 4)
 
-Godot 4.4 (GDScript). One-room greybox stealth-puzzle prototype. Nooni sneaks past Yasser using crouch and cover, and her two cats help: Bruce with a heavy pressure plate and his Bat-Nap, Semba with climbing and his Mighty Roar.
-Everything in the room is built in code, so there is no scene to assemble by hand. The look is cel-shaded: a toon shader (hard light bands, tinted shadows, rim light) plus an inverted-hull black outline, so it works on the lightweight Compatibility renderer.
+A cozy 3D stealth-comedy puzzle-adventure in five levels. Cel-shaded, built entirely in code from primitives, with
+procedurally generated sound. Keyboard and mouse.
 
 ## Run it
-1. Download **Godot 4.4.x (standard, not .NET)** from https://godotengine.org/download. It is a single `.exe`, with no installer.
-2. Start Godot, click **Import**, pick `godot/project.godot` in this repo, and press **F5** (Play).
+1. Download **Godot 4.4.x (standard, not .NET)** from https://godotengine.org/download (a single `.exe`, no installer).
+2. Start Godot, click **Import**, pick `godot/project.godot`, and press **F5**.
 
+The first import takes a few seconds. Progress and settings save automatically.
+
+## Controls
 | Key | Action |
 |---|---|
-| WASD or arrow keys / Mouse | Move / look |
-| Ctrl or C | Toggle crouch |
-| Shift | Sprint |
-| Space | Jump |
-| R | Wipe your glasses when they smudge (quick tap) |
-| Q | Character ability (Bruce: Bat-Nap, Semba: Mighty Roar) |
-| Hold Tab | Cat-ical Wheel: time slows, move the mouse to a slice, release to switch (a quick tap cycles) |
-| 1 / 2 / 3 | Switch straight to Nooni / Bruce / Semba |
-| Esc, then click | Free / re-capture the mouse |
+| WASD / arrow keys | Move (steer the Mazda: W/S throttle and brake, A/D steer) |
+| Mouse | Look and aim |
+| Ctrl or C | Crouch (hide inside the translucent blue cover boxes) |
+| Shift / Space | Sprint / jump (Space is the handbrake when driving) |
+| R | Wipe your glasses when they smudge |
+| Hold Tab | Cat-ical Wheel: time slows, pick a character with the mouse, release (a quick tap cycles) |
+| 1 / 2 / 3 | Switch to Nooni / Bruce / Semba |
+| Q | Character ability: Bruce's Bat-Nap, Semba's Mighty Roar |
+| Hold right mouse | Detective Vision: sightlines, suspicion, hackable gadgets |
+| E | Hack a gadget (with Detective Vision on); hack the next red light when driving |
+| Left mouse | Grapple (aim the crosshair at a hook) |
+| H | Horn |
+| Esc | Pause |
 
-## Solving the room
-1. The green exit pad is locked in the pantry (north-east). Its door opens only while something weighing 2 or more stands on the orange pressure plate. Nooni weighs 1, Bruce weighs 3.
-2. Press **2** (or hold Tab) to play Bruce. He is slow, and brothers never notice cats. Walk him onto the plate in the north (the counter reads `3 / 2`) and the door slides open.
-3. Switch back to Nooni (**1**) and sneak to the pad while Bruce keeps the door open.
-4. Optional: **Semba** (press **3**) is fast, has a double jump and climbs. Push toward the bookshelf or the curtain on the west wall (they are labelled "climb (Semba)") and hold forward to scale it. From a high point press **Q** for the **Mighty Roar**: every brother in the room walks over to stare up at him for about 7 seconds. Switch to Nooni and slip past while Yasser is away from his patrol. Brothers still have eyes, so stay out of sight while they cross the room.
-5. Optional: press **Q** with Bruce beside Yasser's patrol route to arm a Bat-Nap. When Yasser walks by he is forced into a 10-second petting session, frozen, and Nooni can walk past him. The nap stays armed while you play Nooni.
+## The levels
+1. **The Living Room** teaches the cats. Bruce (heavy) opens the pantry door from a pressure plate, Semba climbs the
+   bookshelf and roars to pull Yasser away, Nooni sneaks past. A hook above the TV leads to a wall shelf.
+2. **Kitchen and Garage.** Yasser guards the kitchen, sharp-eyed Ahmed the hall. The garage door is smart-locked: hack the
+   lock (Detective Vision) and dash, weigh down the plate with Bruce, or lure the brothers with Semba or the smart speaker.
+3. **King Fahd Road.** Arcade driving in the blue Mazda CX-5. Dodge traffic, and hack red lights to green before cross
+   traffic arrives. Crashes cost seconds; beat the clock.
+4. **PNU Courtyard.** Two guards and Ahmed. Reach the library: hack the lock, park Bruce on the plate, or grapple onto
+   the lobby balcony.
+5. **The Exam Hall.** A countdown to the bell, a professor with a huge sight arc, Yasser and Ahmed in the side aisles.
+   Desks are cover. Reach Seat 42.
 
-Crouching works as before.
+## The mechanics
+- **Stealth:** each brother has a vision cone, a suspicion meter and a last-seen memory. Crouching in cover makes Nooni
+  invisible; crouching in the open only halves his range. States: patrol, suspicious, investigating, caught.
+- **Stress:** Nooni's health bar is a stress meter. It rises as a brother closes in, past halfway her glasses smudge, and
+  the smudge only clears when she taps R. Stress makes her sloppier at hiding.
+- **Bruce** weighs 3 and works pressure plates; his Bat-Nap traps a brother in a ten-second petting session.
+- **Semba** is fast with a double jump, climbs curtains and shelves, and from a high point his roar pulls every brother to him.
+- **Detective Vision** shows each brother's cone, suspicion and silhouette through walls, plus hackable devices:
+  TV/speaker (lure), lights (halve everyone's sight), locks (open a door).
+- **Grapple:** aim the crosshair at a hook within range and line of sight, click, and Nooni zips there.
+- **Assist cones:** Settings can show or hide the brothers' cones outside Detective Vision.
 
-**Stress:** Nooni has a stress meter instead of health. It rises while Yasser is closing in on spotting her (and a little when he is merely near), and falls when she is left alone, faster crouched in cover. Past the halfway mark her glasses fog up and the smudge keeps building until she taps **R** to wipe them. Stress also makes her sloppier at hiding when crouched in the open. It keeps running while you play a cat, so she may be smudged when you switch back. Crouch inside the blue cover boxes to be invisible; crouching in the open only halves his sight range.
-
-## Automated tests
+## Tests
 ```
-godot --headless --path godot -s res://tests/run_tests.gd
+godot --headless --path godot --import                       # once, so resources import
+godot --headless --path godot -s res://tests/run_tests.gd     # everything (a few minutes)
+godot --headless --path godot -s res://tests/run_tests.gd -- driving   # one section
 ```
-Runs 104 checks in the real room: vision-cone maths, detection (standing vs crouched in cover, range, behind him), Yasser's navmesh patrol, Nooni's movement and crouch, the glimpse, investigate, return-to-patrol cycle, all four arrow keys, the pressure plate and door, switching with the camera blend, the wheel (time slowdown, hover, cancel, locked slot, tap to cycle) Bruce's Bat-Nap, Semba's climbing, speed, double jump and Mighty Roar (including the lure and its cooldown), and an end-to-end win through the pantry door. Prints PASS/FAIL per check and exits non-zero on failure.
+Sections include `detection`, `patrol`, `switching`, `wheel_flow`, `bat_nap`, `semba_climbing`, `mighty_roar`,
+`stress_and_smudge`, `framework`, `vision_and_hacking`, `grapple`, `levels_solvable`, `level_two`,
+`courtyard_and_exam_hall`, `driving`, `audio`. They run the real game scenes headless: vision, navigation, puzzles,
+menus, saving, every level's ground route, and the driving rules. Screenshot tools (need a display, e.g. `xvfb-run`):
+`tests/screenshot*.gd`.
 
-Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tests/screenshot.gd -- <out_dir>`.
-
-![Start view](../docs/screenshots/start_view.png)
-![Semba](../docs/screenshots/semba.png)
-![Semba roaring from the bookshelf, Yasser drawn over](../docs/screenshots/semba_roar.png)
-![Bruce](../docs/screenshots/bruce.png)
-![Bruce napping](../docs/screenshots/bruce_nap.png)
-![The Cat-ical Wheel](../docs/screenshots/wheel.png)
-![Door open](../docs/screenshots/overhead_door_open.png)
-![Nooni](../docs/screenshots/nooni.png)
-![Nooni crouched, hair tied up](../docs/screenshots/nooni_crouched.png)
-![Yasser](../docs/screenshots/yasser.png)
-![Overhead, Yasser noticing Nooni](../docs/screenshots/overhead_spotted.png)
+## Audio
+`python3 tools/make_audio.py` regenerates every effect and music loop into `godot/audio/` (numpy only).
 
 ## Layout
-- `scenes/main.tscn`: tiny scene that runs `prototype/greybox_room.gd`
-- `scripts/characters/nooni.gd`: movement, crouch-stealth, third-person camera
-- `scripts/characters/playable_character.gd`: shared camera, mouse-look and possession for every playable character
-- `scripts/characters/bruce.gd`: Bruce (weight 3, slow, Bat-Nap)
-- `scripts/characters/semba.gd` + `scripts/puzzle/climbable.gd`: Semba (fast, climbs, Mighty Roar) and the surfaces he can climb
-- `scripts/characters/character_switcher.gd` + `scripts/ui/cat_wheel_ui.gd`, `wheel_math.gd`: the Cat-ical Wheel and camera blend
-- `scripts/puzzle/pressure_plate.gd`, `sliding_door.gd`: weight-activated door
-- `scripts/stealth/stress_meter.gd` + `scripts/ui/glasses_overlay.gd`: stress, smudge and wiping
-- `scripts/ai/brother_ai.gd`: patrol / suspicious / investigate / caught, vision cone and awareness
-- `scripts/ai/vision_math.gd`: cone maths (unit-tested)
-- `scripts/stealth/cover_volume.gd`: hiding boxes
-- `scripts/core/input_actions.gd`: input map, registered in code
-- `scripts/core/toon.gd` + `shaders/toon.gdshader`, `shaders/outline.gdshader`: the cel-shaded look; every mesh is built through `toon.gd`
-- `tests/run_tests.gd`: headless checks
+- `scenes/`: `main.tscn` (title), `level.tscn` (stealth), `drive.tscn` (driving), `credits.tscn`
+- `scripts/core`: `game_state.gd` (progress, saves, settings), `audio.gd`, `toon.gd` (cel-shading helpers), input map
+- `scripts/levels`: level registry and one data file per level (`level_kit.gd` has helpers)
+- `scripts/game`: `level.gd` (builds a level from data), `drive.gd`, menus
+- `scripts/characters`: Nooni, Bruce, Semba, the cat wheel switcher
+- `scripts/ai`, `scripts/stealth`, `scripts/puzzle`, `scripts/driving`, `scripts/ui`
+- `shaders/`: toon and outline shaders
+
+## Screenshots
+![Title screen](../docs/screenshots/ui_menu.png)
+![Detective Vision](../docs/screenshots/vision.png)
+![Cat wheel](../docs/screenshots/wheel.png)
+![King Fahd Road](../docs/screenshots/drive_light.png)
+![Exam hall](../docs/screenshots/exam_hall_top.png)
+![PNU Courtyard](../docs/screenshots/courtyard_top.png)
+![Kitchen and Garage](../docs/screenshots/kitchen_garage_top.png)
