@@ -5,12 +5,15 @@ extends Node3D
 ##   Yasser walks a loop through the middle; the sofa and counter are cover.
 ##   The exit pad is locked in a pantry. Its door opens only while Bruce (weight 3) sits on the pressure plate;
 ##   Nooni weighs too little. Bruce's Bat-Nap can freeze Yasser while Nooni sneaks past.
+##   Semba can climb the curtain or bookshelf on the west wall and roar to draw Yasser over there.
 
 const NooniScript := preload("res://scripts/characters/nooni.gd")
 const BrotherScript := preload("res://scripts/ai/brother_ai.gd")
 const CoverScript := preload("res://scripts/stealth/cover_volume.gd")
 const Toon := preload("res://scripts/core/toon.gd")
 const BruceScript := preload("res://scripts/characters/bruce.gd")
+const SembaScript := preload("res://scripts/characters/semba.gd")
+const ClimbableScript := preload("res://scripts/puzzle/climbable.gd")
 const SwitcherScript := preload("res://scripts/characters/character_switcher.gd")
 const WheelUIScript := preload("res://scripts/ui/cat_wheel_ui.gd")
 const PlateScript := preload("res://scripts/puzzle/pressure_plate.gd")
@@ -21,6 +24,7 @@ var test_mode := false
 
 var nooni: CharacterBody3D
 var bruce: CharacterBody3D
+var semba: CharacterBody3D
 var yasser: CharacterBody3D
 var switcher: Node
 var door: AnimatableBody3D
@@ -43,6 +47,7 @@ func _ready() -> void:
 	_build_level()
 	_build_cover()
 	_build_decor()
+	_build_climbables()
 	_build_characters()
 	_build_plate()
 	_build_exit()
@@ -111,6 +116,8 @@ func _build_level() -> void:
 	_box(region, "Counter", Vector3(4.5, 0.5, -1), Vector3(1, 1, 3), Color(0.85, 0.55, 0.35))
 	_box(region, "CoffeeTable", Vector3(-0.5, 0.25, 0), Vector3(1.6, 0.5, 0.8), Color(0.5, 0.33, 0.24))
 
+	_box(region, "Bookshelf", Vector3(-5.75, 1.0, 3.2), Vector3(0.5, 2.0, 2.0), Color(0.62, 0.42, 0.28))
+
 	# Pantry in the north-east corner. The exit pad is inside, behind a door that Bruce can open.
 	var panel_color := Color(0.93, 0.8, 0.62)
 	_box(region, "Pantry_West", Vector3(3.2, 1.25, 3.75), Vector3(0.15, 2.5, 2.5), panel_color, wall_panel)
@@ -146,6 +153,20 @@ func _build_decor() -> void:
 	Toon.box(decor, Vector3(2.0, 1.0, 0.05), Vector3(-2.0, 1.55, 4.97), Color(0.3, 0.2, 0.15), 0.0)
 	Toon.box(decor, Vector3(1.8, 0.8, 0.02), Vector3(-2.0, 1.55, 4.945), Color(0.55, 0.78, 0.95), 0.0)
 
+	# Books and shelves on the bookshelf's front face (x = -5.5).
+	var spines := [Color(0.85, 0.3, 0.35), Color(0.3, 0.55, 0.85), Color(0.95, 0.75, 0.25), Color(0.4, 0.75, 0.5), Color(0.7, 0.4, 0.8)]
+	for row in 3:
+		var shelf_y := 0.3 + row * 0.55
+		Toon.box(decor, Vector3(0.08, 0.04, 1.9), Vector3(-5.46, shelf_y, 3.2), Color(0.42, 0.27, 0.18), 0.0)
+		for i in 7:
+			var book := Toon.box(decor, Vector3(0.12, 0.34, 0.2), Vector3(-5.44, shelf_y + 0.2, 2.35 + i * 0.27), spines[(i + row) % spines.size()], 0.01)
+			book.rotation_degrees.z = 4.0 * ((i + row) % 3 - 1)
+
+	# Curtain on the west wall with its rod, just south of the bookshelf.
+	Toon.box(decor, Vector3(0.05, 2.1, 1.1), Vector3(-5.95, 1.2, 1.6), Color(0.78, 0.3, 0.48), 0.02)
+	var rod := Toon.cylinder(decor, 0.03, 1.4, Vector3(-5.9, 2.3, 1.6), Color(0.3, 0.22, 0.18), 0.01)
+	rod.rotation_degrees = Vector3(90, 0, 0)
+
 	# Floor lamp with a warm light, tucked in the north-west corner.
 	Toon.cylinder(decor, 0.04, 1.6, Vector3(-5.4, 0.8, 4.4), Color(0.2, 0.18, 0.25), 0.015)
 	Toon.cylinder(decor, 0.32, 0.4, Vector3(-5.4, 1.8, 4.4), Color(1.0, 0.92, 0.6), 0.02, 0.18)
@@ -155,6 +176,12 @@ func _build_decor() -> void:
 	glow.light_energy = 0.45
 	glow.omni_range = 6.0
 	decor.add_child(glow)
+
+
+## Grab zones for Semba. Wall direction points into the surface; the landing is a spot on top of the bookshelf.
+func _build_climbables() -> void:
+	_climbable("Climb_Bookshelf", Vector3(-5.0, 1.1, 3.2), Vector3(0.9, 2.2, 1.6), 2.0, Vector3(-5.72, 2.05, 3.2))
+	_climbable("Climb_Curtain", Vector3(-5.4, 1.2, 1.6), Vector3(1.0, 2.4, 1.1), 2.3, Vector3(-5.72, 2.05, 2.6))
 
 
 func _build_cover() -> void:
@@ -176,6 +203,13 @@ func _build_characters() -> void:
 	bruce.position = Vector3(-4.4, 0, -4.2)
 	bruce.rotation.y = -PI * 0.5
 	add_child(bruce)
+
+	semba = SembaScript.new()
+	semba.name = "Semba"
+	semba.test_mode = test_mode
+	semba.position = Vector3(-5.2, 0, -3.5)
+	semba.rotation.y = -PI * 0.5
+	add_child(semba)
 
 	yasser = BrotherScript.new()
 	yasser.name = "Yasser"
@@ -203,7 +237,7 @@ func _build_switcher() -> void:
 	switcher.name = "CharacterSwitcher"
 	switcher.test_mode = test_mode
 	add_child(switcher)
-	switcher.setup([nooni, bruce, null], _wheel_ui, 0)  # Semba's slot stays locked for now
+	switcher.setup([nooni, bruce, semba], _wheel_ui, 0)
 
 
 func _build_exit() -> void:
@@ -244,7 +278,7 @@ func _build_hud() -> void:
 	box.add_child(_awareness_bar)
 
 	var help := _hud_label()
-	help.text = "WASD/arrows move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Q ability | Hold Tab: cat wheel | 1/2 switch | Esc free mouse"
+	help.text = "WASD/arrows move | Mouse look | Ctrl/C crouch | Shift sprint | Space jump | Q ability | Hold Tab: cat wheel | 1/2/3 switch | Esc free mouse"
 	box.add_child(help)
 
 	_wheel_ui = WheelUIScript.new()
@@ -284,6 +318,17 @@ func _box(parent: Node, box_name: String, pos: Vector3, size: Vector3, color: Co
 	parent.add_child(body)
 
 
+func _climbable(climb_name: String, pos: Vector3, size: Vector3, top_y: float, landing: Vector3) -> void:
+	var zone := ClimbableScript.new()
+	zone.name = climb_name
+	zone.position = pos
+	zone.size = size
+	zone.wall_direction = Vector3(-1, 0, 0)
+	zone.top_y = top_y
+	zone.landing = landing
+	add_child(zone)
+
+
 func _cover(cover_name: String, pos: Vector3, size: Vector3) -> void:
 	var zone := CoverScript.new()
 	zone.name = cover_name
@@ -303,7 +348,7 @@ func _finish(message: String) -> void:
 	_message_label.text = message
 	switcher.close_wheel(false)
 	switcher.locked = true
-	for character in [nooni, bruce]:
+	for character in [nooni, bruce, semba]:
 		character.input_enabled = false
 	if not test_mode:
 		await get_tree().create_timer(restart_delay).timeout

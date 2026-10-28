@@ -8,6 +8,7 @@ extends CharacterBody3D
 ## States: PATROL -> SUSPICIOUS (sees her, stops and stares) -> INVESTIGATE (lost her, walks to the last
 ## seen spot and looks around) -> back to PATROL. CAUGHT is terminal. PETTED: Bruce's Bat-Nap froze him
 ## for a while; he ignores everything, then forgets what he was doing and resumes his patrol.
+## LURED is INVESTIGATE with a flag: Semba's Mighty Roar sends him to the spot below the yowl to stare up.
 
 const VisionMath := preload("res://scripts/ai/vision_math.gd")
 const Toon := preload("res://scripts/core/toon.gd")
@@ -56,6 +57,9 @@ var _look_timer := 0.0
 var _arrived := false
 var _last_known := Vector3.ZERO
 var _petted_timer := 0.0
+var _lured := false
+var _lure_seconds := 0.0
+var _lure_source := Vector3.ZERO
 var _hearts: Node3D
 
 
@@ -163,7 +167,7 @@ func state_name() -> String:
 		State.SUSPICIOUS:
 			return "Suspicious"
 		State.INVESTIGATE:
-			return "Investigating"
+			return "Drawn by a yowl" if _lured else "Investigating"
 		State.PETTED:
 			return "Being petted"
 		_:
@@ -222,6 +226,8 @@ func _perceive(target: Node3D) -> float:
 
 func _enter(next: State) -> void:
 	state = next
+	if next != State.INVESTIGATE:
+		_lured = false
 	_hearts.visible = next == State.PETTED
 	match next:
 		State.PATROL:
@@ -231,10 +237,10 @@ func _enter(next: State) -> void:
 		State.SUSPICIOUS:
 			_lamp.albedo_color = Color.YELLOW
 		State.INVESTIGATE:
-			_lamp.albedo_color = Color(1.0, 0.55, 0.0)
+			_lamp.albedo_color = Color(0.35, 0.65, 1.0) if _lured else Color(1.0, 0.55, 0.0)
 			_agent.target_position = _last_known
 			_arrived = false
-			_look_timer = look_around_seconds
+			_look_timer = _lure_seconds if _lured else look_around_seconds
 		State.PETTED:
 			_lamp.albedo_color = Color(1.0, 0.5, 0.75)
 		State.CAUGHT:
@@ -284,10 +290,30 @@ func _tick_investigate(delta: float) -> void:
 		return
 
 	_stop(delta)
-	rotate_y(deg_to_rad(look_around_deg_per_sec) * delta)
+	if _lured:
+		_face_point(_lure_source, stare_turn_speed * delta)  # stare up at the yowling cat
+	else:
+		rotate_y(deg_to_rad(look_around_deg_per_sec) * delta)
 	_look_timer -= delta
 	if _look_timer <= 0.0:
 		_enter(State.PATROL)
+
+
+func can_be_lured() -> bool:
+	return _running and state != State.CAUGHT and state != State.PETTED
+
+
+## Semba's Mighty Roar: drop what he is doing, walk to the spot below `source` and stare up for `seconds`.
+## If he catches sight of Nooni on the way he still turns suspicious, as usual.
+func lure(source: Vector3, seconds: float) -> bool:
+	if not can_be_lured():
+		return false
+	_lure_source = source
+	_last_known = Vector3(source.x, 0.0, source.z)
+	_lure_seconds = seconds
+	_lured = true
+	_enter(State.INVESTIGATE)
+	return true
 
 
 func can_be_petted() -> bool:

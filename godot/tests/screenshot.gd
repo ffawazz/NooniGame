@@ -43,6 +43,36 @@ func _initialize() -> void:
 	close.queue_free()
 	room.nooni.get_camera().current = true
 
+	# Semba close-up, then roaring from the bookshelf with Yasser drawn toward him.
+	var cam2 := Camera3D.new()
+	room.add_child(cam2)
+	cam2.current = true
+	room.semba.global_position = Vector3(1.5, 0, -3.5)
+	room.semba.rotation.y = -PI * 0.5
+	_closeup(cam2, room.semba, 2.4, 0.4)
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png(out + "/shot_semba.png")
+
+	room.semba.global_position = Vector3(-5.72, 2.05, 3.2)
+	room.semba.rotation.y = -PI * 0.5
+	room.yasser.global_position = Vector3(-2.0, 0, 1.0)
+	room.yasser.rotation.y = PI
+	await create_timer(0.3).timeout
+	room.semba.try_roar()
+	cam2.global_position = Vector3(-2.2, 3.2, 4.2)
+	cam2.look_at(Vector3(-5.2, 1.6, 2.8), Vector3.UP)
+	await create_timer(0.5).timeout
+	root.get_texture().get_image().save_png(out + "/shot_semba_roar.png")
+	await create_timer(1.0).timeout
+	cam2.global_position = Vector3(-1.5, 3.4, 5.2)
+	cam2.look_at(Vector3(-4.2, 0.5, 2.6), Vector3.UP)
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png(out + "/shot_yasser_lured.png")
+	cam2.queue_free()
+	room.nooni.get_camera().current = true
+	room.semba.global_position = Vector3(-5.2, 0, -3.5)
+	await create_timer(0.3).timeout
+
 	# The Cat-ical Wheel, hovering Bruce, from Nooni's camera.
 	room.switcher.open_wheel()
 	room.switcher.hover_offset(Vector2(87, 50))

@@ -39,6 +39,9 @@ func _run() -> void:
 	await _test_switching()
 	await _test_wheel_flow()
 	await _test_bat_nap()
+	await _test_semba_climbing()
+	await _test_mighty_roar()
+	await _test_win_through_door()
 
 	print("")
 	if failures == 0:
@@ -272,7 +275,10 @@ func _test_switching() -> void:
 	_check(bruce_moved > 0.5 and bruce_moved < 1.6, "Bruce is slow: %.1f m in 0.6 s (Nooni would do ~2 m)" % bruce_moved)
 	_check(nooni_moved < 0.05, "Nooni stays put while Bruce is played")
 
-	_check(not sw.request_switch(2), "the locked Semba slot refuses")
+	_check(sw.request_switch(2), "switching on to Semba is accepted")
+	await create_timer(0.8).timeout
+	_check(sw.current == room.semba and room.semba.input_enabled and not room.bruce.input_enabled, "control passed from Bruce to Semba")
+	_check(root.get_camera_3d() == room.semba.get_camera(), "Semba's camera is the live camera")
 	_check(sw.request_switch(0), "and we can switch back to Nooni")
 	await create_timer(0.8).timeout
 	_check(sw.current == room.nooni and room.nooni.input_enabled, "back in control of Nooni")
@@ -283,6 +289,15 @@ func _test_switching() -> void:
 func _test_wheel_flow() -> void:
 	var room := await _new_room()
 	var sw = room.switcher
+
+	# A null roster slot is a locked character: lock Semba for a moment to check the wheel respects it.
+	sw.roster[2] = null
+	sw.open_wheel()
+	sw.hover_offset(Vector2(-87, 50))
+	await create_timer(0.3, true, false, true).timeout
+	sw.close_wheel(true)
+	_check(sw.current == room.nooni and room.nooni.input_enabled, "releasing over a locked slot does nothing")
+	sw.roster[2] = room.semba
 
 	_check(sw.open_wheel(), "holding Tab opens the wheel")
 	_check(is_equal_approx(Engine.time_scale, sw.slow_time_scale), "time slows down while the wheel is open")
@@ -303,13 +318,15 @@ func _test_wheel_flow() -> void:
 
 	sw.open_wheel()
 	sw.hover_offset(Vector2(-87, 50))
+	_check(sw.hovered == 2, "hovering lower left highlights Semba")
 	await create_timer(0.3, true, false, true).timeout
 	sw.close_wheel(true)
-	_check(sw.current == room.bruce, "releasing over the locked Semba slot does nothing")
+	_check(sw.current == room.semba, "releasing over Semba switches to him")
+	await create_timer(0.8).timeout
 
 	sw.open_wheel()
 	sw.close_wheel(true)  # an immediate tap
-	_check(sw.current == room.nooni, "a quick tap cycles to the next unlocked cat (skipping Semba)")
+	_check(sw.current == room.nooni, "a quick tap cycles on to the next cat (Semba -> Nooni)")
 	await create_timer(0.8).timeout
 	room.queue_free()
 	await process_frame
@@ -347,5 +364,133 @@ func _test_bat_nap() -> void:
 	await create_timer(2.5).timeout
 	_check(room.yasser.state_name() != "Being petted", "Yasser snaps out of it after the petting ends")
 	_check(room.bruce.state_name() == "Ready", "Bruce recovers and can nap again")
+	room.queue_free()
+	await process_frame
+
+
+## Semba grabs the bookshelf by pushing toward it and climbs it with the forward key.
+func _test_semba_climbing() -> void:
+	var room := await _new_room()
+	var sw = room.switcher
+	var semba = room.semba
+
+	_check(sw.request_switch(2), "switch to Semba")
+	await create_timer(0.8).timeout
+
+	# Stand in front of the bookshelf, facing it (camera yaw west), then push forward.
+	semba.global_position = Vector3(-4.7, 0, 3.2)
+	semba._yaw = PI * 0.5
+	var start_speed_check: Vector3 = semba.global_position
+	Input.action_press("move_forward")
+	var climbed := false
+	for i in range(30):
+		await create_timer(0.1).timeout
+		if semba.state == semba.State.CLIMBING:
+			climbed = true
+	Input.action_release("move_forward")
+	_check(climbed, "pushing toward the bookshelf makes Semba start climbing")
+	_check(semba.global_position.y > 1.9, "he reaches the top of the bookshelf (y = %.2f)" % semba.global_position.y)
+	_check(semba.global_position.distance_to(Vector3(-5.72, 2.05, 3.2)) < 1.0, "and is standing on it, not floating beside it")
+
+	# Fast: Semba outruns Nooni (5.5 vs 3.5 m/s).
+	semba.global_position = Vector3(0, 0, -2)
+	semba._yaw = -PI * 0.5
+	await create_timer(0.3).timeout
+	var from: Vector3 = semba.global_position
+	Input.action_press("move_forward")
+	await create_timer(0.6).timeout
+	Input.action_release("move_forward")
+	var ran: float = semba.global_position.distance_to(from)
+	_check(ran > 2.5, "Semba is fast: %.1f m in 0.6 s (Nooni does ~2 m)" % ran)
+
+	# Double jump: a second Space press in mid-air.
+	await create_timer(0.3).timeout
+	var ground_y: float = semba.global_position.y
+	Input.action_press("jump")
+	await create_timer(0.1).timeout
+	Input.action_release("jump")
+	await create_timer(0.15).timeout
+	var first_peak: float = semba.global_position.y
+	Input.action_press("jump")
+	await create_timer(0.1).timeout
+	Input.action_release("jump")
+	await create_timer(0.3).timeout
+	_check(semba.global_position.y > ground_y + 1.2, "a second jump in mid-air carries him higher (%.2f m above ground)" % (semba.global_position.y - ground_y))
+	room.queue_free()
+	await process_frame
+
+
+func _test_mighty_roar() -> void:
+	var room := await _new_room()
+	var semba = room.semba
+
+	# On the floor there is nothing to roar from.
+	semba.global_position = Vector3(-4.0, 0, 0)
+	_check(not semba.can_roar() and not semba.try_roar(), "Semba can't roar from the floor")
+
+	# On top of the bookshelf he can. Yasser starts across the room, looking away.
+	room.yasser.global_position = Vector3(-2, 0, -3.8)
+	room.yasser.rotation.y = PI  # facing +Z, away from the south wall
+	semba.global_position = Vector3(-5.72, 2.05, 3.2)
+	await create_timer(0.3).timeout
+	_check(semba.can_roar(), "from the high point he can roar")
+	_check(semba.try_roar(), "Mighty Roar!")
+	_check(not semba.can_release(), "he can't be switched away from mid-roar")
+	_check(semba.state_name() == "ROARING", "state shows ROARING")
+	await create_timer(0.2).timeout
+	_check(room.yasser.state_name() == "Drawn by a yowl", "Yasser is drawn by the yowl")
+
+	await create_timer(5.0).timeout
+	var floor_spot := Vector3(-5.72, 0, 3.2)
+	var gap: float = Vector2(room.yasser.global_position.x - floor_spot.x, room.yasser.global_position.z - floor_spot.z).length()
+	_check(gap < 2.6, "he walked across the room to the bookshelf (%.1f m away)" % gap)
+	_check(semba.can_release(), "Semba is free to be switched again after the roar")
+	_check(not semba.can_roar(), "and is hoarse for a while (cooldown)")
+	room.queue_free()
+	await process_frame
+
+	# The lure wears off and he goes back to patrolling.
+	room = await _new_room()
+	room.semba.lure_seconds = 1.0
+	room.yasser.global_position = Vector3(-2, 0, 0)
+	room.yasser.rotation.y = PI
+	room.nooni.global_position = Vector3(-2, 0, -3.9)
+	room.nooni.set_crouching_instant(true)  # hidden in the sofa's cover
+	room.semba.global_position = Vector3(-5.72, 2.05, 3.2)
+	await create_timer(0.3).timeout
+	room.semba.try_roar()
+	await create_timer(0.3).timeout
+	_check(room.yasser.state_name() == "Drawn by a yowl", "lured")
+	await create_timer(6.0).timeout
+	_check(room.yasser.state_name() == "Patrol", "the lure wears off and he returns to patrol")
+	room.queue_free()
+	await process_frame
+
+
+## The whole point: the exit is only reachable while Bruce holds the door open.
+func _test_win_through_door() -> void:
+	# Door shut: pushing at the doorway gets her nowhere.
+	var room := await _new_room()
+	room.nooni.global_position = Vector3(4.7, 0, 1.6)
+	room.nooni._yaw = PI  # camera faces +Z, toward the door
+	Input.action_press("move_forward")
+	await create_timer(1.5).timeout
+	Input.action_release("move_forward")
+	_check(room.nooni.global_position.z < 2.4 and not room._finished, "with the door shut Nooni can't get into the pantry")
+	room.queue_free()
+	await process_frame
+
+	# Bruce on the plate: she walks through and wins.
+	room = await _new_room()
+	room.bruce.global_position = room.plate.global_position
+	await create_timer(1.5).timeout
+	_check(room.door.is_fully_open(), "Bruce holds the door open")
+	room.nooni.global_position = Vector3(4.7, 0, 1.6)
+	room.nooni._yaw = PI
+	Input.action_press("move_forward")
+	await create_timer(2.5).timeout
+	Input.action_release("move_forward")
+	_check(room._finished, "Nooni walks through the open door onto the exit pad and the round is won")
+	_check(room._message_label.text.begins_with("MISSION COMPLETE"), "with the win message on screen")
 	room.queue_free()
 	await process_frame
