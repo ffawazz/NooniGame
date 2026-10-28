@@ -4,12 +4,18 @@ extends SceneTree
 
 const VisionMath := preload("res://scripts/ai/vision_math.gd")
 const WheelMath := preload("res://scripts/ui/wheel_math.gd")
-const RoomScene := preload("res://scenes/main.tscn")
+const Levels := preload("res://scripts/levels/levels.gd")
+const RoomScene := preload("res://scenes/level.tscn")
 
 var failures := 0
 
 
 func _initialize() -> void:
+	# Autoloads aren't started by `godot -s`, so install our own GameState node where the game expects it.
+	var state := preload("res://scripts/core/game_state.gd").new()
+	state.name = "GameState"
+	state.test_mode = true  # no scene changes, never touch the real save
+	root.add_child(state)
 	# Nodes added to the root during _initialize don't get _ready until the first frame.
 	await process_frame
 	_run()
@@ -43,6 +49,7 @@ func _run() -> void:
 	await _test_mighty_roar()
 	await _test_win_through_door()
 	await _test_stress_and_smudge()
+	await _test_framework()
 
 	print("")
 	if failures == 0:
@@ -585,4 +592,123 @@ func _test_stress_and_smudge() -> void:
 	await create_timer(0.9).timeout
 	_check(room._glasses.visible, "but still there when we switch back")
 	room.queue_free()
+	await process_frame
+
+
+func _test_framework() -> void:
+	var state = root.get_node("GameState")
+	state.save_path = "user://test_save.cfg"
+	state.unlocked = 1
+	state.results = {}
+	state.current_level = 0
+
+	# Progress and best times.
+	var has_next: bool = state.complete_level(42.0, 2)
+	_check(has_next == (Levels.count() > 1), "completing a level reports whether another follows")
+	_check(state.results[0].seconds == 42.0 and state.results[0].spotted == 2, "the result is recorded")
+	state.complete_level(60.0, 5)
+	_check(state.results[0].seconds == 42.0, "a slower run does not replace the best time")
+	state.complete_level(30.0, 1)
+	_check(state.results[0].seconds == 30.0, "a faster run does")
+	_check(state.unlocked == mini(2, Levels.count()), "the next level unlocks")
+
+	# Save / load round trip.
+	state.settings.master = 0.25
+	state.save()
+	state.results = {}
+	state.unlocked = 1
+	state.settings.master = 0.8
+	state.load_save()
+	_check(state.results.has(0) and state.results[0].seconds == 30.0 and is_equal_approx(state.settings.master, 0.25), "progress and settings survive a save and load")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_save.cfg"))
+	state.results = {}
+	state.unlocked = 1
+	state.settings.master = 0.8
+	_check(not state.has_save(), "a fresh game has nothing to continue")
+
+	# Every level in the registry has the data the builder needs.
+	for i in Levels.count():
+		var data := Levels.data(i)
+		for key in ["title", "objective", "solids", "spawns", "exit", "story_intro", "story_outro"]:
+			_check(data.has(key), "level %d has '%s'" % [i + 1, key])
+
+	# The HUD has a row per brother.
+	var room := await _new_room()
+	_check(room.hud._brother_rows.size() == room.brothers.size(), "the HUD lists every brother")
+	room.queue_free()
+	await process_frame
+
+	await _test_menus_and_cards()
+
+
+func _test_menus_and_cards() -> void:
+	# Title screen builds with its pages and level list.
+	var menu = load("res://scenes/main.tscn").instantiate()
+	root.add_child(menu)
+	await create_timer(0.3).timeout
+	_check(menu._pages.size() == 4, "the title screen has main, level select, controls and settings pages")
+	menu._show("levels")
+	await process_frame
+	await process_frame
+	_check(menu._level_box.get_child_count() == Levels.count(), "level select lists every level")
+	menu.queue_free()
+	await process_frame
+
+	# Narration captions queue and expire.
+	var captions = preload("res://scripts/ui/captions.gd").new()
+	root.add_child(captions)
+	await process_frame
+	captions.say("first", 0.2)
+	captions.say("second", 0.2)
+	_check(captions.is_showing() and captions._label.text == "first", "a caption shows")
+	await create_timer(0.3).timeout
+	_check(captions._label.text == "second", "the next caption follows")
+	await create_timer(0.3).timeout
+	_check(not captions.is_showing(), "and it disappears when the queue is empty")
+	captions.queue_free()
+
+	# Story card: space skips typing, then advances; finishes after the last line.
+	var card = preload("res://scripts/ui/story_card.gd").new()
+	root.add_child(card)
+	var done := [false]
+	card.finished.connect(func(): done[0] = true)
+	card.play("Test", ["line one", "line two"])
+	for i in 4:
+		var press := InputEventAction.new()
+		press.action = "ui_accept"
+		press.pressed = true
+		Input.parse_input_event(press)
+		await create_timer(0.1).timeout
+	_check(done[0], "the story card finishes after its last line")
+	card.queue_free()
+
+	# Pause menu toggles pause.
+	var pause = preload("res://scripts/ui/pause_menu.gd").new()
+	root.add_child(pause)
+	pause.setup(null)
+	pause.toggle()
+	_check(paused and pause.visible, "Esc pauses the game and shows the menu")
+	pause.toggle()
+	_check(not paused and not pause.visible, "and resumes it")
+	pause.queue_free()
+
+	# Result panel: win and lose variants.
+	var result = preload("res://scripts/ui/result_panel.gd").new()
+	root.add_child(result)
+	result.show_result(true, "MISSION COMPLETE", ["An outro line."], 75.0, 2, true)
+	var buttons := 0
+	for node in result.find_children("*", "Button", true, false):
+		buttons += 1
+	_check(paused and buttons == 3, "the win panel offers next level, replay and main menu")
+	result.queue_free()
+	paused = false
+	var lose = preload("res://scripts/ui/result_panel.gd").new()
+	root.add_child(lose)
+	lose.show_result(false, "SPOTTED BY YASSER", ["Oh no."], 10.0, 0, false)
+	buttons = 0
+	for node in lose.find_children("*", "Button", true, false):
+		buttons += 1
+	_check(buttons == 2, "the lose panel offers try again and main menu")
+	lose.queue_free()
+	paused = false
 	await process_frame

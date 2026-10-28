@@ -6,6 +6,7 @@ const Toon := preload("res://scripts/core/toon.gd")
 @export var size := Vector3(1.0, 2.2, 0.15)
 @export var open_offset := Vector3(0.0, 2.1, 0.0)
 @export var slide_seconds := 0.6
+@export var display_name := "Door"
 
 var is_open := false
 

@@ -6,7 +6,7 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		out = args[0]
-	var room = load("res://scenes/main.tscn").instantiate()
+	var room = load("res://scenes/level.tscn").instantiate()
 	room.test_mode = true
 	root.add_child(room)
 	await create_timer(1.0).timeout

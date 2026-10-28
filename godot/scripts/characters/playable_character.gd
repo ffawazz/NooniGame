@@ -94,8 +94,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(min_pitch_deg),
 			deg_to_rad(max_pitch_deg)
 		)
-	elif event.is_action_pressed("pause"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 

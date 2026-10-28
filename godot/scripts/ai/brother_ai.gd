@@ -17,6 +17,11 @@ signal caught(brother)
 
 enum State { PATROL, SUSPICIOUS, INVESTIGATE, CAUGHT, PETTED }
 
+## Who this is. Sets his look and how sharp he is (see _apply_kind): yasser, ahmed, guard, professor.
+@export var kind := "yasser"
+var body_color := Color(0.82, 0.28, 0.27)
+var hair_color := Color(0.12, 0.08, 0.07)
+
 @export_group("Patrol")
 @export var patrol_speed := 1.8
 @export var wait_at_point := 1.5
@@ -64,6 +69,7 @@ var _hearts: Node3D
 
 
 func _ready() -> void:
+	_apply_kind()
 	add_to_group("brother")
 	collision_layer = 4  # brother
 	collision_mask = 1  # world
@@ -77,6 +83,34 @@ func _ready() -> void:
 		_enter(State.PATROL)
 
 
+## Per-character look and senses. Yasser keeps the defaults.
+func _apply_kind() -> void:
+	match kind:
+		"ahmed":  # sharp-eyed, narrower view, quicker to notice
+			body_color = Color(0.25, 0.45, 0.85)
+			hair_color = Color(0.35, 0.2, 0.1)
+			view_distance = 11.0
+			view_angle = 70.0
+			patrol_speed = 1.5
+			detection_seconds = 1.0
+			wait_at_point = 0.8
+		"guard":  # campus security: wide view, brisk
+			body_color = Color(0.32, 0.38, 0.32)
+			hair_color = Color(0.1, 0.1, 0.1)
+			view_distance = 8.0
+			view_angle = 110.0
+			patrol_speed = 2.2
+			detection_seconds = 0.9
+		"professor":  # absent-minded: slow, but sees a huge arc
+			body_color = Color(0.55, 0.38, 0.65)
+			hair_color = Color(0.75, 0.75, 0.78)
+			view_distance = 7.0
+			view_angle = 130.0
+			patrol_speed = 1.1
+			detection_seconds = 1.6
+			wait_at_point = 2.5
+
+
 func _build_body() -> void:
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.5
@@ -87,9 +121,9 @@ func _build_body() -> void:
 	add_child(collision)
 
 	# Cel-shaded Yasser: red hoodie, dark hair, and a visor that doubles as the alert lamp.
-	Toon.capsule(self, 0.48, 1.45, Vector3(0, 0.725, 0), Color(0.82, 0.28, 0.27))
+	Toon.capsule(self, 0.48, 1.45, Vector3(0, 0.725, 0), body_color)
 	Toon.sphere(self, 0.29, Vector3(0, 1.6, 0), Color(0.87, 0.66, 0.52))
-	var hair := Toon.sphere(self, 0.31, Vector3(0, 1.68, 0.05), Color(0.12, 0.08, 0.07))
+	var hair := Toon.sphere(self, 0.31, Vector3(0, 1.68, 0.05), hair_color)
 	hair.scale = Vector3(1.0, 0.8, 1.0)
 
 	var visor := MeshInstance3D.new()
@@ -102,6 +136,15 @@ func _build_body() -> void:
 	_lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	visor.material_override = _lamp
 	add_child(visor)
+
+	var tag := Label3D.new()
+	tag.text = name
+	tag.font_size = 48
+	tag.pixel_size = 0.006
+	tag.outline_size = 10
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.position = Vector3(0, 2.15, 0)
+	add_child(tag)
 
 	# Hearts that orbit his head while he is being petted.
 	_hearts = Node3D.new()
