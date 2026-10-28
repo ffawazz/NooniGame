@@ -99,8 +99,8 @@ func _build_body() -> void:
 	add_child(lamp_mesh)
 
 	_agent = NavigationAgent3D.new()
-	_agent.path_desired_distance = 0.4
-	_agent.target_desired_distance = 0.4
+	_agent.path_desired_distance = 0.7  # navmesh floats ~0.4 m above the floor, so be generous
+	_agent.target_desired_distance = 0.7
 	_agent.radius = 0.5
 	_agent.height = 1.9
 	add_child(_agent)
@@ -317,23 +317,27 @@ func _face_point(point: Vector3, weight: float) -> void:
 # ---- Debug cone ----------------------------------------------------------------------
 
 ## Translucent floor fan showing where he is looking (green -> red as awareness fills).
+## Each ray stops at walls and tall furniture, like his actual line of sight.
 func _update_cone() -> void:
 	_cone.visible = show_cone
 	if not show_cone:
 		return
 
-	_cone.global_transform = Transform3D(Basis(Vector3.UP, rotation.y), global_position + Vector3.UP * 0.03)
+	var origin := global_position
+	_cone.global_transform = Transform3D(Basis(Vector3.UP, rotation.y), origin + Vector3.UP * 0.03)
 	var color := Color.GREEN.lerp(Color.RED, awareness)
 	color.a = 0.18
 
-	_cone_mesh.clear_surfaces()
-	_cone_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var space := get_world_3d().direct_space_state
+	var ray_height := Vector3.UP * (eye_height * 0.75)
 	var half := deg_to_rad(view_angle) * 0.5
 	var segments := 16
-	var previous := Vector3(sin(-half), 0.0, -cos(-half)) * view_distance
+
+	_cone_mesh.clear_surfaces()
+	_cone_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var previous := _cone_edge(space, origin + ray_height, -half)
 	for i in range(1, segments + 1):
-		var a := lerpf(-half, half, float(i) / segments)
-		var next := Vector3(sin(a), 0.0, -cos(a)) * view_distance
+		var next := _cone_edge(space, origin + ray_height, lerpf(-half, half, float(i) / segments))
 		_cone_mesh.surface_set_color(color)
 		_cone_mesh.surface_add_vertex(Vector3.ZERO)
 		_cone_mesh.surface_set_color(color)
@@ -342,3 +346,15 @@ func _update_cone() -> void:
 		_cone_mesh.surface_add_vertex(next)
 		previous = next
 	_cone_mesh.surface_end()
+
+
+## Local-space (cone node) end point of one fan ray, shortened where it hits the world.
+func _cone_edge(space: PhysicsDirectSpaceState3D, from: Vector3, angle: float) -> Vector3:
+	var local := Vector3(sin(angle), 0.0, -cos(angle))
+	var world_dir := Basis(Vector3.UP, rotation.y) * local
+	var query := PhysicsRayQueryParameters3D.create(from, from + world_dir * view_distance, 1)
+	var hit := space.intersect_ray(query)
+	var length := view_distance
+	if not hit.is_empty():
+		length = from.distance_to(hit.position)
+	return local * length

@@ -1,7 +1,7 @@
 extends Node3D
 ## Greybox stealth test room, built entirely in code: level, cover, Nooni, Yasser, exit, HUD.
 ## Layout (metres, +X east, +Z south):
-##   Nooni starts in the (-X, -Z) corner; the exit pad is in the opposite (+X, +Z) corner.
+##   Nooni starts by the south wall, west of the sofa; the exit pad is in the opposite (+X, +Z) corner.
 ##   Yasser walks a loop through the middle; the sofa and counter are cover.
 
 const NooniScript := preload("res://scripts/characters/nooni.gd")
@@ -83,8 +83,8 @@ func _build_level() -> void:
 
 	var nav_mesh := NavigationMesh.new()
 	nav_mesh.agent_radius = 0.5
-	nav_mesh.agent_height = 1.9
-	nav_mesh.agent_max_climb = 0.3
+	nav_mesh.agent_height = 2.0
+	nav_mesh.agent_max_climb = 0.25
 	nav_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	nav_mesh.geometry_collision_mask = 1
 	region.navigation_mesh = nav_mesh
@@ -100,8 +100,8 @@ func _build_characters() -> void:
 	nooni = NooniScript.new()
 	nooni.name = "Nooni"
 	nooni.test_mode = test_mode
-	nooni.position = Vector3(-5, 0, -4)
-	nooni.rotation.y = -PI * 0.75  # facing the room's centre
+	nooni.position = Vector3(-3.2, 0, -4.3)  # south wall, with open floor behind her for the camera
+	nooni.rotation.y = -PI * 0.5  # facing +X
 	add_child(nooni)
 
 	yasser = BrotherScript.new()

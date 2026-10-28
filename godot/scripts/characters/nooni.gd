@@ -27,7 +27,7 @@ const CoverVolume := preload("res://scripts/stealth/cover_volume.gd")
 
 @export_group("Camera")
 @export var look_sensitivity := 0.003
-@export var camera_distance := 4.0
+@export var camera_distance := 3.2
 @export var pivot_height := 1.5
 @export var min_pitch_deg := -60.0
 @export var max_pitch_deg := 25.0
@@ -40,7 +40,7 @@ var crouching := false
 var current_height := 1.8
 
 var _yaw := 0.0
-var _pitch := -0.2
+var _pitch := -0.45
 var _shape: CapsuleShape3D
 var _collision: CollisionShape3D
 var _body: MeshInstance3D

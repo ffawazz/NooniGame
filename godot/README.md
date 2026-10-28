@@ -21,7 +21,12 @@ Reach the green pad. Crouch inside the blue cover boxes to be invisible; crouchi
 ```
 godot --headless --path godot -s res://tests/run_tests.gd
 ```
-Checks the vision-cone maths and runs five detection scenarios in the real room (standing vs crouched in cover, range, and behind him). Prints PASS/FAIL per check and exits non-zero on failure.
+Runs 22 checks in the real room: vision-cone maths, detection (standing vs crouched in cover, range, behind him), Yasser's navmesh patrol, Nooni's movement and crouch, and the glimpse, investigate, return-to-patrol cycle. Prints PASS/FAIL per check and exits non-zero on failure.
+
+Screenshots (needs a display, e.g. `xvfb-run`): `godot --path godot -s res://tests/screenshot.gd -- <out_dir>`.
+
+![Start view](../docs/screenshots/start_view.png)
+![Overhead, Yasser noticing Nooni](../docs/screenshots/overhead_spotted.png)
 
 ## Layout
 - `scenes/main.tscn`: tiny scene that runs `prototype/greybox_room.gd`
