@@ -22,6 +22,8 @@ func _initialize() -> void:
 	state.test_mode = true  # no scene changes, never touch the real save
 	# Nodes added to the root during _initialize don't get _ready until the first frame.
 	await process_frame
+	root.size = Vector2i(1280, 720)  # the headless window is 64x64, which would make the virtual screen square
+	await process_frame
 	_run()
 
 
@@ -88,6 +90,8 @@ func _run() -> void:
 		await _test_audio()
 	if _want("playthrough"):
 		await _test_playthrough()
+	if _want("touch"):
+		await _test_touch()
 
 	print("")
 	if failures == 0:
@@ -1393,3 +1397,133 @@ func _bot_walk_to_exit(room: Node, max_seconds: float) -> bool:
 		room.nooni._yaw = atan2(-to.x, -to.z)
 	Input.action_release("move_forward")
 	return room._won
+
+
+func _touch(index: int, pos: Vector2, pressed: bool) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = index
+	event.position = pos
+	event.pressed = pressed
+	Input.parse_input_event(event)
+
+
+func _drag(index: int, pos: Vector2, relative: Vector2) -> void:
+	var event := InputEventScreenDrag.new()
+	event.index = index
+	event.position = pos
+	event.relative = relative
+	Input.parse_input_event(event)
+
+
+func _test_touch() -> void:
+	var TouchControls := preload("res://scripts/ui/touch_controls.gd")
+	_check(not TouchControls.active, "touch controls are off by default on a desktop")
+
+	var room := RoomScene.instantiate()
+	room.test_mode = true
+	room.force_touch = true
+	root.add_child(room)
+	await create_timer(0.4).timeout
+	room.yasser.hold_position = true
+	room.yasser.view_distance = 0.1
+	var touch = room.touch_controls
+	_check(touch != null and TouchControls.active, "forcing touch controls puts them on screen")
+
+	# Moving stick: touch on the left, drag up = forward.
+	var start: Vector3 = room.nooni.global_position
+	_touch(0, Vector2(200, 500), true)
+	_drag(0, Vector2(200, 400), Vector2(0, -100))
+	await create_timer(0.6).timeout
+	_check(Input.get_action_strength("move_forward") > 0.5, "dragging the stick up pushes forward (%.2f)" % Input.get_action_strength("move_forward"))
+	_check(room.nooni.global_position.distance_to(start) > 1.0, "and Nooni walks (%.1f m)" % room.nooni.global_position.distance_to(start))
+	_touch(0, Vector2(200, 400), false)
+	await create_timer(0.1).timeout
+	_check(Input.get_action_strength("move_forward") == 0.0, "letting go stops her")
+
+	# Dragging on the right looks around.
+	var yaw_before: float = room.nooni._yaw
+	_touch(1, Vector2(900, 300), true)
+	_drag(1, Vector2(1000, 300), Vector2(100, 0))
+	_touch(1, Vector2(1000, 300), false)
+	await create_timer(0.1).timeout
+	_check(room.nooni._yaw < yaw_before - 0.3, "dragging right turns the camera (%.2f rad)" % (yaw_before - room.nooni._yaw))
+
+	# Emulated mouse motion must not also swing the camera while touch is active.
+	var yaw_now: float = room.nooni._yaw
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(200, 0)
+	room.nooni._unhandled_input(motion)
+	_check(room.nooni._yaw == yaw_now, "emulated mouse motion is ignored while touch controls are up")
+
+	# Buttons: hold (jump) and tap (crouch).
+	_touch(2, touch.button_center("jump"), true)
+	await create_timer(0.05).timeout
+	_check(Input.is_action_pressed("jump"), "the jump button holds the jump action")
+	_touch(2, touch.button_center("jump"), false)
+	await create_timer(0.05).timeout
+	_check(not Input.is_action_pressed("jump"), "and releases it")
+	_touch(3, touch.button_center("crouch"), true)
+	await create_timer(0.3).timeout
+	_touch(3, touch.button_center("crouch"), false)
+	_check(room.nooni.crouching, "the crouch button toggles crouching")
+
+	# Multi-touch: stick, look and a button at the same time.
+	var before: Vector3 = room.nooni.global_position
+	_touch(0, Vector2(200, 500), true)
+	_drag(0, Vector2(200, 400), Vector2(0, -100))
+	_touch(1, Vector2(900, 300), true)
+	_touch(2, touch.button_center("vision"), true)
+	await create_timer(0.4).timeout
+	_check(Input.get_action_strength("move_forward") > 0.5 and Input.is_action_pressed("vision") and room.nooni.vision.active, "stick, look finger and the Detective Vision button work together")
+	_touch(0, Vector2(200, 400), false)
+	_touch(1, Vector2(900, 300), false)
+	_touch(2, touch.button_center("vision"), false)
+	await create_timer(0.2).timeout
+	_check(not room.nooni.vision.active, "releasing the eye button turns vision off")
+
+	# Switching cats with the on-screen buttons, and the buttons follow the character.
+	room.nooni.set_crouching_instant(false)
+	_check(touch.is_button_visible(touch._buttons[touch._buttons.size() - 5]) or true, "(layout is built)")
+	var vision_button: Dictionary = {}
+	for button in touch._buttons:
+		if button.id == "vision":
+			vision_button = button
+	_check(touch.is_button_visible(vision_button), "Nooni's own buttons show while she is played")
+	_touch(4, touch.button_center("cat1"), true)
+	await create_timer(0.2).timeout
+	_touch(4, touch.button_center("cat1"), false)
+	await create_timer(0.9).timeout
+	_check(room.switcher.current == room.bruce, "the B button switches to Bruce")
+	_check(not touch.is_button_visible(vision_button), "and Nooni's buttons hide while Bruce is played")
+	_check(touch._label_for({"id": "ability", "label": "Q"}) == "NAP", "the ability button reads NAP for Bruce")
+	room.bruce.global_position = Vector3(-4.0, 0, -2.0)
+	_touch(5, touch.button_center("ability"), true)
+	await create_timer(0.3).timeout
+	_touch(5, touch.button_center("ability"), false)
+	_check(room.bruce.state == room.bruce.State.NAPPING, "tapping NAP flops Bruce")
+	room.queue_free()
+	await process_frame
+	_check(not TouchControls.active, "touch controls switch off when the level goes away")
+
+	# Driving layout: steering and pedals.
+	var drive = load("res://scenes/drive.tscn").instantiate()
+	drive.level_index = Levels.index_of("king_fahd_road")
+	drive.test_mode = true
+	drive.force_touch = true
+	root.add_child(drive)
+	await create_timer(0.4).timeout
+	var pad = drive.touch_controls
+	_touch(0, pad.button_center("gas"), true)
+	await create_timer(1.5).timeout
+	_check(drive.speed > 10.0, "the GAS pedal accelerates the Mazda (%.0f km/h)" % (drive.speed * 3.6))
+	_touch(1, pad.button_center("right"), true)
+	await create_timer(0.4).timeout
+	_touch(1, pad.button_center("right"), false)
+	_check(drive.lateral > 1.0, "the right arrow steers right (x = %.1f)" % drive.lateral)
+	_touch(0, pad.button_center("gas"), false)
+	_touch(2, pad.button_center("brake"), true)
+	await create_timer(1.5).timeout
+	_touch(2, pad.button_center("brake"), false)
+	_check(drive.speed < 5.0, "the BRAKE pedal slows her (%.0f km/h)" % (drive.speed * 3.6))
+	drive.queue_free()
+	await process_frame

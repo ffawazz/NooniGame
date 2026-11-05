@@ -4,6 +4,8 @@ A cozy 3D stealth-comedy puzzle-adventure about Nooni, a Saudi Information Syste
 inconveniences like high-stakes espionage. Sneak past her overprotective brothers Yasser and Ahmed by switching between
 Nooni, Bruce (a fat black cat who thinks he is Batman) and Semba (a grey street cat with a Lion King complex).
 
+**To play on Android:** download [`releases/NooniGame_android.apk`](releases/NooniGame_android.apk), open it on your phone and allow "install unknown apps" when asked (see the Android notes in [`godot/README.md`](godot/README.md)).
+
 **To just play (Windows): unzip [`releases/NooniGame_windows_x64.zip`](releases/NooniGame_windows_x64.zip) and run `NooniGame.exe`.**
 
 **The source lives in [`godot/`](godot/README.md)** (Godot 4, GDScript). Open that folder's `project.godot` in Godot 4.4

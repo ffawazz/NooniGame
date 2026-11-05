@@ -4,6 +4,7 @@ extends CharacterBody3D
 ## where they were left, with input off, so Bruce can keep napping on a trap while Nooni sneaks.
 
 const InputActions := preload("res://scripts/core/input_actions.gd")
+const TouchControls := preload("res://scripts/ui/touch_controls.gd")
 
 ## 0 = Nooni, 1 = Bruce, 2 = Semba. Matches the cat wheel's slice order.
 @export var character_id := 0
@@ -84,18 +85,20 @@ func status_text() -> String:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if test_mode or not input_enabled:
+	# With touch controls up, the finger drives the camera; ignore the mouse events Godot emulates from touches.
+	if test_mode or not input_enabled or TouchControls.active:
 		return
 
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_yaw -= event.relative.x * look_sensitivity
-		_pitch = clampf(
-			_pitch - event.relative.y * look_sensitivity,
-			deg_to_rad(min_pitch_deg),
-			deg_to_rad(max_pitch_deg)
-		)
+		apply_look(event.relative * look_sensitivity)
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## Turns the camera by `radians` (x = yaw, y = pitch). Used by the mouse and by touch drags.
+func apply_look(radians: Vector2) -> void:
+	_yaw -= radians.x
+	_pitch = clampf(_pitch - radians.y, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
 
 
 func _process(_delta: float) -> void:

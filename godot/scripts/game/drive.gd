@@ -12,6 +12,7 @@ const CarModel := preload("res://scripts/driving/car_model.gd")
 const TrafficCarScript := preload("res://scripts/driving/traffic_car.gd")
 const StopLightScript := preload("res://scripts/driving/stop_light.gd")
 const CaptionsScript := preload("res://scripts/ui/captions.gd")
+const TouchControlsScript := preload("res://scripts/ui/touch_controls.gd")
 const StoryCardScript := preload("res://scripts/ui/story_card.gd")
 const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
 const ResultPanelScript := preload("res://scripts/ui/result_panel.gd")
@@ -28,6 +29,9 @@ const CAR_HALF := Vector2(0.95, 2.15)  # x, z
 @export var level_index := -1
 ## Headless tests: no cards, menus or scene changes.
 var test_mode := false
+## Show the on-screen touch controls even on a desktop (tests, screenshots). Phones always get them.
+var force_touch := false
+var touch_controls: Node
 
 var data: Dictionary
 var car: Node3D
@@ -79,6 +83,12 @@ func _ready() -> void:
 		lights.append(light)
 	_ensure_chunks()
 	_build_hud()
+
+	if force_touch or TouchControlsScript.wanted():
+		touch_controls = TouchControlsScript.new()
+		touch_controls.mode = "drive"
+		touch_controls.level = self
+		add_child(touch_controls)
 
 	captions = CaptionsScript.new()
 	add_child(captions)
@@ -297,7 +307,7 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-18.0, 50.0, 0.0)  # low sunset sun
 	sun.light_color = Color(1.0, 0.75, 0.55)
 	sun.light_energy = 0.8
-	sun.shadow_enabled = true
+	sun.shadow_enabled = not OS.has_feature("mobile")
 	add_child(sun)
 
 
@@ -412,8 +422,9 @@ func _build_hud() -> void:
 	layer.add_child(_hud.timer)
 
 	_hud.speed = MenuKit.label("", 54, Color.WHITE)
-	_hud.speed.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_hud.speed.position = Vector2(-300, -110)
+	_hud.speed.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_hud.speed.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_hud.speed.position.y -= 110.0
 	layer.add_child(_hud.speed)
 
 	_hud.message = MenuKit.label("", 44)

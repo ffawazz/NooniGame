@@ -3,6 +3,26 @@
 A cozy 3D stealth-comedy puzzle-adventure in five levels. Cel-shaded, built entirely in code from primitives, with
 procedurally generated sound. Keyboard and mouse.
 
+## Play it on Android
+Download `../releases/NooniGame_android.apk` to your phone and tap it. Android will ask you to allow installing apps from
+that source ("Install unknown apps"): allow it just for the browser or file manager you used. The app is signed with a
+throwaway debug key, so Google Play Protect may show a "unknown developer" notice: choose "Install anyway".
+Needs Android 7.0 or newer, landscape. Touch controls appear automatically:
+
+| Touch | Action |
+|---|---|
+| Drag on the left | Move (the stick appears under your thumb) |
+| Drag on the right | Look around |
+| JUMP / RUN / DUCK | Jump (hold to hold) / sprint (hold) / crouch (tap) |
+| EYE (hold) | Detective Vision |
+| HACK / HOOK / WIPE | Hack a gadget / grapple the hook under the crosshair / wipe your glasses |
+| Q button (NAP / ROAR) | The current cat's ability |
+| N / B / S (top right) | Switch to Nooni / Bruce / Semba |
+| II | Pause |
+| Driving: arrows, GAS, BRAKE, DRIFT, HACK, HORN | Steer, pedals, handbrake, hack the next red light, horn |
+
+The buttons change with the character you are playing, so Bruce and Semba show only their own.
+
 ## Play it (Windows, no Godot needed)
 Unzip `../releases/NooniGame_windows_x64.zip` and run `NooniGame.exe`. Windows may warn that it is unsigned: click "More info", then "Run anyway".
 
@@ -61,9 +81,15 @@ godot --headless --path godot -s res://tests/run_tests.gd -- driving   # one sec
 ```
 Sections include `detection`, `patrol`, `switching`, `wheel_flow`, `bat_nap`, `semba_climbing`, `mighty_roar`,
 `stress_and_smudge`, `framework`, `vision_and_hacking`, `grapple`, `levels_solvable`, `level_two`,
-`courtyard_and_exam_hall`, `driving`, `audio`. They run the real game scenes headless: vision, navigation, puzzles,
+`courtyard_and_exam_hall`, `driving`, `audio`, `playthrough`, `touch`. They run the real game scenes headless: vision, navigation, puzzles,
 menus, saving, every level's ground route, and the driving rules. Screenshot tools (need a display, e.g. `xvfb-run`):
 `tests/screenshot*.gd`.
+
+## Building the Android APK
+`tools/android/build_apk.sh` does it end to end on Linux/macOS/WSL (needs Godot 4.4.1, a JDK, python3 and curl). It fetches
+Godot's Android template and Google's `apksig` signer, makes a throwaway debug key, and writes `build/NooniGame.apk`
+(signed with the v2 scheme, Android 7+). Without that script, Godot's own route also works: install Android Studio's
+SDK, set it in Editor Settings > Export > Android, then Project > Export > Android. `tools/make_icon.py` redraws the icon.
 
 ## Building the Windows exe
 `export_presets.cfg` has a "Windows Desktop" preset. In Godot: Editor > Manage Export Templates > Download, then Project > Export. Or headless: `godot --headless --path godot --export-release "Windows Desktop"` (writes `build/NooniGame.exe`).

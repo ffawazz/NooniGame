@@ -17,6 +17,7 @@ const DoorScript := preload("res://scripts/puzzle/sliding_door.gd")
 const HackableScript := preload("res://scripts/puzzle/hackable.gd")
 const AnchorScript := preload("res://scripts/puzzle/grapple_anchor.gd")
 const HudScript := preload("res://scripts/ui/hud.gd")
+const TouchControlsScript := preload("res://scripts/ui/touch_controls.gd")
 const CaptionsScript := preload("res://scripts/ui/captions.gd")
 const StoryCardScript := preload("res://scripts/ui/story_card.gd")
 const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
@@ -28,6 +29,9 @@ const Toon := preload("res://scripts/core/toon.gd")
 @export var level_index := -1
 ## Headless tests: no mouse capture, no cards or menus, no scene changes.
 var test_mode := false
+## Show the on-screen touch controls even on a desktop (tests, screenshots). Phones always get them.
+var force_touch := false
+var touch_controls: Node
 
 var data: Dictionary
 var nooni: CharacterBody3D
@@ -83,6 +87,11 @@ func _ready() -> void:
 	switcher.test_mode = test_mode
 	add_child(switcher)
 	switcher.setup([nooni, bruce, semba], hud.wheel_ui, 0)
+
+	if force_touch or TouchControlsScript.wanted():
+		touch_controls = TouchControlsScript.new()
+		touch_controls.level = self
+		add_child(touch_controls)
 
 	captions = CaptionsScript.new()
 	add_child(captions)
@@ -155,7 +164,7 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-52.0, 35.0, 0.0)
 	sun.light_color = env_data.get("sun", Color(1.0, 0.93, 0.82))
 	sun.light_energy = env_data.get("sun_energy", 0.62)
-	sun.shadow_enabled = true
+	sun.shadow_enabled = not OS.has_feature("mobile")  # shadows are too heavy for most phones
 	add_child(sun)
 
 
